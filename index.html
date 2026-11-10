@@ -66,8 +66,12 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
 .line .lab{color:var(--mute);width:58px;flex:none}
 .strat .lab{color:var(--mute);margin-right:4px}
-.seg{border:1px solid var(--ink);background:transparent;padding:1px 12px;font-size:12.5px}
-.seg.on{background:var(--ink);color:var(--paper)}
+.segwrap{display:inline-flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden}
+.seg{border:none;background:transparent;padding:2px 14px;font-size:12.5px;border-radius:0}
+.seg+.seg{border-left:1px solid var(--ink)}
+.seg.on{background:var(--ink);color:var(--paper);font-weight:600}
+.seg:hover:not(.on){background:var(--paper2)}
+.shint{font-size:11.5px;color:var(--mute);margin-left:4px}
 .grades{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--mute)}
 
 #log{padding:10px 0}
@@ -97,13 +101,15 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1.5px solid var(--ink);z-index:6}
 .dock .in{max-width:760px;margin:0 auto;padding:9px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:12px;align-items:stretch}
 .ctrl{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
-@media(max-width:560px){.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.seg{padding:1px 10px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
+@media(max-width:560px){.seg{padding:2px 11px}.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
 .act:hover:not(:disabled){background:var(--paper2)}
 .act:disabled,.next:disabled{opacity:.35;cursor:not-allowed}
 .next{border:none;background:var(--red);color:#fff;font-weight:700;padding:12px 18px;font-size:15px;white-space:nowrap}
 .next:hover:not(:disabled){background:#9a2c18}
 .hint{font-size:11.5px;color:var(--mute)}
+.ln.strat .x{font-weight:600}
+.ln.strat .x::before{content:"⚙ ";color:var(--mute);font-weight:400}
 .ln.pet .x{color:#6b5a3a}
 .ln.pet .x::before{content:"🐾 "}
 
@@ -492,6 +498,18 @@ function drift(){
   if(s.strat==='moyu'){ s.moyu++; s.st.moyuTot++; } else s.moyu = 0;
 }
 
+const STRAT_MSG = {
+  juan:   ['你决定从这个季度开始卷起来。', '持续生效：每季表现 +12，健康、精神、头发消耗加快，能力涨得更快'],
+  normal: ['你决定回到正常节奏，按时上下班。', '持续生效：表现正常，健康和精神缓慢消耗'],
+  moyu:   ['你决定开始摸鱼，保存体力。', '持续生效：每季表现 −12，健康和精神慢慢恢复，能力几乎不涨；摸鱼有被抓的风险'],
+};
+function setStrat(k){
+  if(!s || s.over || !STRAT[k] || s.strat === k) return;
+  s.strat = k;
+  const m = STRAT_MSG[k];
+  log('', m[0], 'strat', m[1]);
+  render();
+}
 function qScore(){
   let v = 50 + (s.abi-55)*.55 + STRAT[s.strat].perf + (s.boss-50)*.3 + [-4,0,4][bizSt()] + s.qmod + rf(-13,13);
   if(has('卷王体质') && s.strat==='juan') v += 3;
@@ -1598,8 +1616,8 @@ function render(){
   $('cohortBtn').onclick = showCohort;
   const bars = [['能力','abi'],['健康','hp'],['精神','san'],['人脉','net'],['老板好感','boss'],['头发','hair']];
   $('bars').innerHTML = bars.map(([n,k]) => { const v = Math.round(s[k]); return `<div class="bar"><span>${n}</span><div class="track"><div class="fill ${v<25&&k!=='abi'?'low':''}" style="width:${v}%"></div></div><span class="num">${v}</span></div>`; }).join('');
-  $('strat').innerHTML = `<span class="lab">策略</span>` + Object.entries(STRAT).map(([k,v]) => `<button class="seg ${s.strat===k?'on':''}" data-s="${k}">${v.n}</button>`).join('') + `<span class="grades">${s.grades.filter(g=>g!=='·').slice(-4).join(' · ') || '暂无绩效'}</span>`;
-  $('strat').querySelectorAll('.seg').forEach(x => x.onclick = () => { s.strat = x.dataset.s; render(); });
+  $('strat').innerHTML = `<span class="lab">策略</span><span class="segwrap">` + Object.entries(STRAT).map(([k,v]) => `<button class="seg ${s.strat===k?'on':''}" data-s="${k}">${v.n}</button>`).join('') + `</span><span class="shint">持续生效</span><span class="grades">${s.grades.filter(g=>g!=='·').slice(-4).join(' · ') || '暂无绩效'}</span>`;
+  $('strat').querySelectorAll('.seg').forEach(x => x.onclick = () => setStrat(x.dataset.s));
   const busy = s.queue.length || s.over || s.unemployed;
   const row = (k, lab, used) => `<span class="lab">${lab}</span>` + ACTIONS.map((a,i) => a.k!==k ? '' : `<button class="act" data-i="${i}" ${busy || used || (a.c && !a.c()) ? 'disabled' : ''}>${a.n}</button>`).join('') + `<span class="hint">${used ? '本季已用' : '每季 1 次'}</span>`;
   $('actsW').innerHTML = row('w','工作',s.actedW);

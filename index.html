@@ -1282,7 +1282,7 @@ function cohortSummary(){
 }
 function cohortHTML(){
   const fr = new Set((s.friends||[]).map(f=>f.p));
-  return s.cohort.map(m => `<div class="mate"><div class="nm">${m.name}${fr.has(m)?'<span class="chip rare">发小</span>':''}<span class="chip">${m.style.n}</span><span class="chip">${m.role}</span></div>
+  return s.cohort.map(m => `<div class="mate"><div class="nm">${m.name}${fr.has(m)?'<span class="chip rare">职场发小</span>':''}<span class="chip">${m.style.n}</span><span class="chip">${m.role}</span></div>
     <div class="now ${m.out?'out':m.top?'top':''}">${mateNow(m)}</div>
     ${m.his.length?`<div class="his">${m.his.slice(-3).join(' → ')}</div>`:'<div class="his">一直在原来的岗位上</div>'}</div>`).join('');
 }

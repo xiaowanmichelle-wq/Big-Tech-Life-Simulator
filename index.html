@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大厂人生模拟器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3efe6;--paper2:#ebe5d8;--ink:#23201b;--mute:#7b7468;--line:#d6cebd;
+  --red:#b5361f;--green:#3f6b47;--amber:#a8741a;--blue:#2f5576;
+  --serif:"Noto Serif SC","Songti SC","STSong",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+#app{max-width:760px;margin:0 auto;padding:0 16px}
+h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;margin:0}
+.sub{color:var(--mute);font-size:13px;letter-spacing:.08em}
+
+/* start */
+#start{padding:48px 0 64px}
+.masthead{border-bottom:3px double var(--ink);padding-bottom:14px;margin-bottom:28px}
+.odds{font-family:var(--serif);font-size:15px;margin:24px 0 6px;color:var(--mute)}
+.odds b{font-size:30px;color:var(--ink);font-weight:900;letter-spacing:.02em}
+.card{background:#fbf9f4;border:1.5px solid var(--ink);box-shadow:5px 5px 0 var(--ink);padding:18px 20px;margin:14px 0 26px}
+.row{display:flex;gap:14px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.row:last-child{border-bottom:none}
+.row .k{width:72px;flex:none;color:var(--mute);font-size:13px;padding-top:2px}
+.row .v{flex:1}
+.row .v small{display:block;color:var(--mute);font-size:12.5px;line-height:1.5}
+.chip{display:inline-block;font-size:12px;border:1px solid var(--ink);padding:0 7px;margin:0 6px 4px 0;border-radius:2px}
+.chip.rare{background:var(--red);color:#fff;border-color:var(--red)}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{border:1.5px solid var(--ink);background:transparent;padding:9px 20px;font-weight:600}
+.btn:hover{background:var(--paper2)}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.primary:hover{background:#3a352d}
+.gallery{margin-top:36px;font-size:13px;color:var(--mute)}
+.gallery .g{display:inline-block;margin:3px 6px 3px 0;padding:1px 8px;border:1px solid var(--line)}
+.gallery .g.on{color:var(--ink);border-color:var(--ink)}
+
+/* game */
+#game{padding-bottom:200px}
+.top{position:sticky;top:0;background:var(--paper);z-index:5;padding:12px 0 8px;border-bottom:1.5px solid var(--ink)}
+.id1{font-family:var(--serif);font-weight:700;font-size:17px;line-height:1.5}
+.id1 .sep{color:var(--line);margin:0 6px}
+.badge{font-family:inherit;font-size:11.5px;font-weight:600;padding:0 6px;margin-left:4px;vertical-align:2px;border:1px solid}
+.st0{color:var(--mute);border-color:var(--mute)}
+.st1{color:var(--blue);border-color:var(--blue)}
+.st2{color:var(--red);border-color:var(--red)}
+.id2{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin:2px 0 8px;flex-wrap:wrap;gap:4px 12px}
+.id2 b{color:var(--ink)}
+.bars{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 16px}
+.bar{display:flex;align-items:center;gap:6px;font-size:12px}
+.bar span:first-child{width:52px;color:var(--mute)}
+.bar .track{flex:1;height:5px;background:var(--paper2);position:relative}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ink);transition:width .4s}
+.bar .fill.low{background:var(--red)}
+.bar .num{width:22px;text-align:right;font-family:var(--mono);font-size:11px}
+.line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.line .lab{color:var(--mute);width:58px;flex:none}
+.strat .lab{color:var(--mute);margin-right:4px}
+.seg{border:1px solid var(--ink);background:transparent;padding:1px 12px;font-size:12.5px}
+.seg.on{background:var(--ink);color:var(--paper)}
+.grades{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--mute)}
+
+#log{padding:10px 0}
+.ln{display:flex;gap:12px;padding:3px 0;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1}}
+.ln .t{flex:none;width:76px;font-family:var(--mono);font-size:11px;color:var(--mute);padding-top:4px}
+.ln .x{flex:1}
+.ln .fx{display:block;font-size:12px;color:var(--mute)}
+.ln.div{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.ln.div .x{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--mute);letter-spacing:.1em}
+.ln.good .x{color:var(--green);font-weight:600}
+.ln.bad .x{color:var(--red);font-weight:600}
+.ln.warn .x{color:var(--amber)}
+.ln.head .x{font-family:var(--serif);font-weight:700}
+.ln.head .x::before{content:"▍";color:var(--red)}
+.ln.perf .x{font-family:var(--serif);font-weight:700}
+
+#choice{margin:14px 0 8px 88px}
+@media(max-width:560px){#choice{margin-left:0}.ln .t{width:56px}.bars{grid-template-columns:repeat(2,1fr)}}
+.cc{background:#fbf9f4;border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:14px 16px}
+.cc h3{margin:0 0 4px;font-family:var(--serif);font-size:16px}
+.cc p{margin:0 0 12px;font-size:14px}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--ink);background:transparent;padding:7px 12px;margin-top:7px}
+.opt:hover{background:var(--ink);color:var(--paper)}
+.opt small{display:block;font-size:12px;opacity:.7}
+
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1.5px solid var(--ink);z-index:6}
+.dock .in{max-width:760px;margin:0 auto;padding:9px 16px 12px;display:flex;gap:12px;align-items:stretch}
+.ctrl{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+@media(max-width:560px){.dock .in{flex-wrap:wrap}.next{width:100%}.line .lab{width:44px}.line .hint{display:none}}
+.act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
+.act:hover:not(:disabled){background:var(--paper2)}
+.act:disabled,.next:disabled{opacity:.35;cursor:not-allowed}
+.next{border:none;background:var(--red);color:#fff;font-weight:700;padding:12px 18px;font-size:15px;white-space:nowrap}
+.next:hover:not(:disabled){background:#9a2c18}
+.hint{font-size:11.5px;color:var(--mute)}
+.ln.pet .x{color:#6b5a3a}
+.ln.pet .x::before{content:"🐾 "}
+
+/* ending */
+#ending{position:fixed;inset:0;background:rgba(35,32,27,.55);z-index:20;overflow:auto;padding:40px 16px}
+.ec{max-width:560px;margin:0 auto;background:var(--paper);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:28px 26px}
+.ec .kind{font-size:12px;letter-spacing:.2em;color:var(--mute)}
+.ec h2{font-family:var(--serif);font-weight:900;font-size:32px;margin:4px 0 10px}
+.ec h2.good{color:var(--green)}.ec h2.bad{color:var(--red)}.ec h2.mid{color:var(--blue)}
+.ec .story{font-size:15px;margin-bottom:16px}
+.ec .pct{font-family:var(--serif);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0;margin:12px 0}
+.ec .pct b{font-size:26px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:13px;margin:12px 0 16px}
+.quote{font-family:var(--serif);font-size:17px;text-align:center;margin:18px 0 6px;padding:14px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.mini{border:1px solid var(--ink);background:transparent;font-size:12px;padding:0 8px;margin-left:6px}
+.mini:hover{background:var(--ink);color:var(--paper)}
+#cohort{position:fixed;inset:0;background:rgba(35,32,27,.55);z-index:25;overflow:auto;padding:30px 16px}
+.cp{max-width:560px;margin:0 auto;background:var(--paper);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:22px 22px 18px}
+.cp h2{font-family:var(--serif);margin:0 0 2px;font-size:22px}
+.cp .sum{color:var(--mute);font-size:13px;margin-bottom:12px}
+.mate{border-top:1px dashed var(--line);padding:9px 0}
+.mate .nm{font-weight:600}
+.mate .nm .chip{font-weight:400;margin-left:6px}
+.mate .now{font-size:14px}
+.mate .now.out{color:var(--blue)}.mate .now.top{color:var(--green)}
+.mate .his{font-size:12px;color:var(--mute);margin-top:2px}
+.ln.cohort .x{color:#5a5248}
+.ln.cohort .x::before{content:"同期入职 · ";color:var(--mute);font-size:12px}
+#share{position:fixed;inset:0;background:rgba(35,32,27,.75);z-index:30;overflow:auto;padding:24px 16px;text-align:center}
+#share img{max-width:min(420px,100%);height:auto;box-shadow:6px 6px 0 rgba(0,0,0,.35);display:block;margin:0 auto}
+#share .tip{color:#eee;font-size:13px;margin:12px 0}
+#share .btns{justify-content:center}
+#share .btn{background:var(--paper)}
+#share textarea{width:min(420px,100%);height:110px;margin-top:10px;font:13px/1.5 inherit;display:none}
+.stats div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line)}
+.stats span:first-child{color:var(--mute)}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="start">
+    <div class="masthead">
+      <h1>大厂人生模拟器</h1>
+      <div class="sub">你是数百万互联网打工人中的一个 · 从入职那天开始，按季度活下去</div>
+    </div>
+    <div class="odds" id="odds"></div>
+    <div class="card" id="rollcard"></div>
+    <div class="btns">
+      <button class="btn" id="reroll">重新投胎</button>
+      <button class="btn primary" id="go">就这个了，入职！</button>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="top">
+      <div class="id1" id="id1"></div>
+      <div class="id2" id="id2"></div>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div id="log"></div>
+    <div id="choice"></div>
+  </section>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="in">
+    <div class="ctrl">
+      <div class="line" id="strat"></div>
+      <div class="line" id="actsW"></div>
+      <div class="line" id="actsL"></div>
+    </div>
+    <button class="next" id="next">下一季度 ▸</button>
+  </div>
+</div>
+<div id="ending" hidden></div>
+<div id="share" hidden></div>
+<div id="cohort" hidden></div>
+
+<script>
+/* ============ 工具 ============ */
+const HAS_DOM = typeof document !== 'undefined';
+// 存档：网页用 localStorage，微信小游戏用 wx 本地存储
+const STORE = (typeof wx !== 'undefined' && wx.getStorageSync)
+  ? {getItem:k=>{ try{ return wx.getStorageSync(k) || null; }catch(e){ return null; } }, setItem:(k,v)=>{ try{ wx.setStorageSync(k,v); }catch(e){} }}
+  : {getItem:k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } }, setItem:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} }};
+const R = () => Math.random();
+const rnd = (a,b) => a + Math.floor(R()*(b-a+1));
+const rf = (a,b) => a + R()*(b-a);
+const pick = a => a[Math.floor(R()*a.length)];
+const clamp = (v,a=0,b=100) => Math.max(a, Math.min(b, v));
+const chance = p => R() < p;
+const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+const r1 = v => Math.round(v*10)/10;
+const sign = v => (v>0?'+':'−') + Math.abs(r1(v));
+function wpick(list, wf = x => x.w){
+  const t = list.reduce((s,x)=>s+wf(x),0); let r = R()*t;
+  for(const x of list){ r -= wf(x); if(r < 0) return x; }
+  return list[list.length-1];
+}
+
+/* ============ 公司数据 ============
+   职级 / 绩效体系参考 2023–2026 年公开报道；薪资为游戏化估算 */
+const C = [
+ {id:'byte',w:12,n:'某短视频大厂',tag:'一线',d:'推荐算法起家，钱给得狠，组织调整也狠',
+  lv:['L1','L2','L3','L4','L5','L6','L7','L8'],pay:[38,52,72,105,165,270,430,700],exec:6,base:0,mb:0,
+  g:['F','I','M-','M','M+','E','E+','O'],cut:[],dist:[.01,.03,.09,.47,.25,.11,.03,.01],rev:[2,4],promo:[4],
+  work:1.25,lay:.010,stock:1,
+  sys:'职级 L1–L10，校招 L1；绩效 F / I / M- / M / M+ / E / E+ / O，M 为“符合预期”；半年一评',
+  biz:[['短视频主站',2,0],['直播电商',2,0],['AI 助手与大模型',1,1],['本地生活',1,.2],['海外短视频',1,0],['企业协作办公',1,-.3],['教育',0,-1],['游戏',0,-.4]]},
+ {id:'kuai',w:8,n:'某二线短视频大厂',tag:'一线',d:'老铁文化，直播电商强，AI 视频生成意外起飞',
+  lv:['E6','E7','E8','E9','E10','E11','E12','E13','E14'],pay:[32,40,50,64,85,120,170,260,400],exec:7,base:0,mb:0,
+  g:['D','C','B','B+','A','S'],cut:[],dist:[.03,.08,.44,.28,.14,.03],rev:[2,4],promo:[4],
+  work:1.2,lay:.013,stock:1,
+  sys:'职级 E6–E15，校招 E6；绩效 D / C / B / B+ / A / S；半年一评',
+  biz:[['主站短视频',2,0],['商业化广告',2,0],['直播电商',2,0],['AI 视频生成',0,1.2],['本地生活',1,0],['海外',0,-.2]]},
+ {id:'ali',w:11,n:'某电商大厂',tag:'一线',d:'价值观考核占一半，"因为信任，所以简单"',
+  lv:['P4','P5','P6','P7','P8','P9','P10'],pay:[22,32,50,85,150,300,600],exec:5,base:1,mb:0,
+  g:['3.25','3.5','3.75'],cut:[],dist:[.10,.60,.30],rev:[1,2,3,4],promo:[2],
+  work:1.15,lay:.013,stock:1,
+  sys:'职级 P4–P10，校招多为 P5；绩效 3.25 / 3.5 / 3.75 三档，按季度考核；连续两季 3.75 可直接晋升',
+  biz:[['淘宝天猫',2,-.3],['云与大模型',2,.8],['即时零售与外卖',1,.8],['国际电商',1,.2],['物流',1,0],['二手交易',1,.2],['大文娱',0,-.8]]},
+ {id:'tx',w:11,n:'某社交游戏大厂',tag:'一线',d:'传说中的"养老厂"，赛马机制，各事业群冷暖不一',
+  lv:['4级','5级','6级','7级','8级','9级','10级','11级','12级','13级','14级'],pay:[28,34,40,47,56,72,92,122,165,235,360],exec:9,base:0,mb:1,
+  g:['Underperform','Good','Outstanding'],cut:[],dist:[.07,.75,.18],rev:[4],promo:[4],promoLow:{max:4,q:[2,4]},
+  work:1.0,lay:.007,stock:1,
+  sys:'职级 4–17 级，校招多为 4/5 级；绩效 Outstanding / Good / Underperform 三档；8 级及以下一年两次晋升窗口',
+  biz:[['社交通讯',2,0],['游戏',2,0],['广告',2,0],['云',1,0],['AI 大模型助手',1,1],['音乐',1,-.2],['长视频',0,-.8]]},
+ {id:'mt',w:9,n:'某外卖本地生活大厂',tag:'一线',d:'"苦练基本功"，地推铁军，打完百团大战打外卖大战',
+  lv:['L4','L5','L6','L7','L8','L9','L10'],pay:[26,33,46,70,110,180,300],exec:5,base:0,mb:1,
+  g:['C','B','B+','A','S'],cut:[],dist:[.07,.43,.30,.16,.04],rev:[2,4],promo:[4],
+  work:1.2,lay:.012,stock:1,
+  sys:'职级 L4–L10，校招多为 L4/L5；绩效 C / B / B+ / A / S；半年一评，晋升一年一次',
+  biz:[['外卖',2,0],['到店酒旅',2,0],['闪购即时零售',1,.9],['海外外卖',0,1],['社区团购',0,-1],['无人机与自动配送',0,.3],['大模型',0,.9]]},
+ {id:'bd',w:7,n:'某老牌搜索大厂',tag:'二线',d:'技术信仰，AI 起得早，搜索基本盘承压',
+  lv:['5级','6级','7级','8级','9级','10级','11级','12级'],pay:[25,32,44,62,95,150,240,380],exec:6,base:0,mb:1,
+  g:['C','B','B+','A','S'],cut:[],dist:[.07,.43,.30,.16,.04],rev:[2,4],promo:[4],
+  work:1.05,lay:.017,stock:1,
+  sys:'职级 5–12 级，校招多为 5/6 级；绩效 C / B / B+ / A / S；半年一评',
+  biz:[['搜索',2,-1],['智能云与大模型',2,.8],['自动驾驶出行',0,1],['地图',1,0],['网盘与文库',1,.1],['内容信息流',0,-.8]]},
+ {id:'pdd',w:6,n:'某拼团电商大厂',tag:'一线',d:'钱多，单休，“本分”',
+  lv:['大头兵','资深大头兵','虚线带人','实线带人','小组长','业务负责人'],pay:[48,65,90,135,230,500],exec:5,base:0,mb:0,
+  g:['低','中','高'],cut:[],dist:[.12,.60,.28],rev:[2,4],promo:[4],
+  work:1.5,lay:.010,stock:0,
+  sys:'按角色晋升：大头兵 → 虚线带人 → 实线带人 → 小组长 → 业务负责人；绩效 低 / 中 / 高；半年一评；普遍 11-11-6 工作制',
+  biz:[['主站电商',2,0],['跨境电商',2,.2],['买菜',1,-.2],['新设产业带公司',0,.4]]},
+ {id:'jd',w:7,n:'某自营电商大厂',tag:'二线',d:'兄弟文化，自建物流，2025 年突然杀进外卖',
+  lv:['T3','T4','T5','T6','T7','T8','T9'],pay:[28,34,44,58,95,160,300],exec:5,base:0,mb:1,
+  g:['C','B','A','S'],cut:[],dist:[.08,.60,.26,.06],rev:[4],promo:[4],
+  work:1.2,lay:.012,stock:0,
+  sys:'职级 T3–T9，校招多为 T3/T4；绩效 C / B / A / S，年度评估；年终奖为绩效对应的月薪倍数',
+  biz:[['零售',2,0],['物流',2,0],['外卖',0,1.3],['健康',1,0],['工业品',1,0],['酒旅',0,.3]]},
+ {id:'hw',w:9,n:'某通信巨头',tag:'一线',d:'"以奋斗者为本"，狼性文化，饱和配股',
+  lv:['13级','14级','15级','16级','17级','18级','19级','20级','21级'],pay:[25,30,38,48,65,90,130,200,350],exec:7,base:0,mb:1,
+  g:['D','C','B','B+','A'],cut:[],dist:[.03,.07,.40,.36,.14],rev:[2,4],promo:[4],
+  work:1.35,lay:.006,stock:1,
+  sys:'职级 13–22 级，校招多为 13/14 级；绩效 D / C / B / B+ / A；半年一评',
+  biz:[['手机终端',2,0],['运营商网络',2,-.3],['AI 算力',1,1],['智能汽车解决方案',0,1],['云',1,0]]},
+ {id:'mi',w:7,n:'某手机生态大厂',tag:'二线',d:'"为发烧而生"，造车之后全员冲刺',
+  lv:['13级','14级','15级','16级','17级','18级','19级','20级','21级','22级'],pay:[22,27,33,42,55,75,105,150,230,400],exec:7,base:0,mb:1,
+  g:['C','B','A','S'],cut:[],dist:[.08,.60,.26,.06],rev:[2,4],promo:[4],
+  work:1.15,lay:.010,stock:1,
+  sys:'职级 13–22 级，校招多为 13/14 级；绩效 C / B / A / S；半年一评',
+  biz:[['手机',2,0],['汽车',1,1.2],['IoT 生态',1,0],['大模型',0,.9],['互联网服务',1,-.1]]},
+ {id:'mnc',w:6,n:'某美资软件外企',tag:'外企',d:'965、英文邮件、Townhall，以及悬在头顶的"中国区战略调整"',
+  lv:['Level 59','Level 60','Level 61','Level 62','Level 63','Level 64','Level 65','Level 66'],pay:[30,36,45,58,75,100,140,200],exec:6,base:0,mb:1,foreign:1,
+  g:['Below','Meets','Exceeds'],cut:[],dist:[.08,.72,.20],rev:[4],promo:[4],
+  work:.75,lay:.016,stock:1,
+  sys:'职级 Level 59–67，数字越大越高级，校招多为 59/60；绩效 Below / Meets / Exceeds，年度评估',
+  biz:[['中国研发中心',1,-.5],['中国区销售',1,0],['云与 AI',1,.5]]},
+ {id:'ai',w:5,n:'某大模型独角兽',tag:'独角兽',d:'估值一年翻几倍，也可能一夜归零',
+  lv:['研究员','高级研究员','核心成员','技术负责人','合伙人'],pay:[55,80,120,190,320],exec:4,base:0,mb:0,unicorn:1,
+  g:['不及格','达标','超预期'],cut:[],dist:[.12,.58,.30],rev:[2,4],promo:[4],
+  work:1.4,lay:.015,stock:1,
+  sys:'扁平组织，按角色晋升：研究员 → 高级研究员 → 核心成员 → 技术负责人 → 合伙人；绩效 不及格 / 达标 / 超预期；半年一评',
+  biz:[['基座模型',2,0],['C 端应用',1,0],['多模态',1,.5],['To B 商业化',0,.2]]},
+];
+const STN = ['边缘','普通','核心'];
+
+const EDUS = [
+ {n:'清北 / 海外名校',w:5,abi:[70,84],age:22,top:1},
+ {n:'985 硕士',w:22,abi:[60,72],age:25,good:1,master:1},
+ {n:'211 本科',w:25,abi:[52,64],age:22,good:1},
+ {n:'双非本科',w:30,abi:[45,57],age:22},
+ {n:'大专 / 培训班转行',w:13,abi:[40,54],age:21,low:1},
+ {n:'辍学自学天才',w:5,abi:[72,86],age:20,genius:1,net:-10,san:-8},
+];
+const ENTRIES = [
+ {n:'校招 SP',w:e=>e.genius?0:(e.top||e.good)?14:2,lv:1,mult:1.15,d:'特殊 offer，起薪更高'},
+ {n:'普通校招',w:e=>e.genius?0:e.low?8:42,d:'和几千个应届生一起入职'},
+ {n:'实习留用',w:e=>e.genius?0:14,boss:10,d:'老板认识你，好感更高'},
+ {n:'社招跳槽',w:e=>e.genius?40:18,age:3,lv:1,money:25,d:'在小厂熬了三年才进来'},
+ {n:'外包驻场',w:e=>e.low?32:4,out:1,d:'工牌颜色不一样，有机会转正'},
+ {n:'被收购并入',w:()=>4,edge:1,boss:-10,d:'原公司被收购，你成了"收编部队"'},
+];
+const ROLES = [
+ {n:'后端开发',w:20,tech:1},{n:'前端开发',w:12,tech:1,fe:1},{n:'算法工程师',w:12,tech:1,algo:1},
+ {n:'产品经理',w:14,pm:1},{n:'运营',w:12,ops:1},{n:'测试开发',w:8,tech:1,qa:1},
+ {n:'交互设计',w:8,des:1},{n:'HRBP',w:6,hr:1},
+];
+const FAMS = [
+ {n:'城市中产，家里有房',w:25,cost:.3,money:30},
+ {n:'小镇做题家',w:35,cost:1.5,d:'每个月往家里打钱'},
+ {n:'需要赡养父母',w:22,cost:2.5,parents:1,d:'父母身体不太好'},
+ {n:'普通工薪家庭',w:13,cost:.8,money:5},
+ {n:'富二代，来体验生活',w:5,cost:0,money:500,san:-8,d:'钱不是问题，意义才是'},
+];
+const TRAITS = [
+ {n:'卷王体质',d:'卷起来掉血少、表现好'},{n:'摸鱼大师',d:'摸鱼不容易被发现'},
+ {n:'向上管理大师',d:'老板好感涨得快'},{n:'背锅体质',d:'锅总会找到你'},
+ {n:'锦鲤',d:'好事发生得更多'},{n:'社恐',d:'答辩与社交减益'},
+ {n:'酒量惊人',d:'团建如鱼得水'},{n:'发量浓密',d:'头发掉得慢'},
+ {n:'PPT 之神',d:'晋升答辩加成'},{n:'技术洁癖',d:'能力涨得快，但跟老板合不来'},
+];
+const RARES = [
+ {n:'老板的远房亲戚',d:'几乎不会被裁，但没人愿意跟你吃午饭',p:.006,key:'kin'},
+ {n:'天才少年计划',d:'起步职级和薪资拉满，期望也拉满',p:.005,key:'genius',needTop:1},
+ {n:'前大厂高 P 回流',d:'33 岁，从高职级开局，发际线已经后移',p:.005,key:'vet'},
+];
+
+const ENDINGS = {
+ fire:{n:'财务自由',t:'good'}, exec:{n:'登顶高管',t:'good'}, startup_ok:{n:'创业成功',t:'good'},
+ civil:{n:'考公上岸',t:'good'}, foreign:{n:'外企养老',t:'mid'}, fossil:{n:'大厂活化石',t:'mid'},
+ home:{n:'回老家',t:'mid'}, shop:{n:'转行开店',t:'mid'}, blogger:{n:'转型博主',t:'mid'},
+ laid:{n:'被毕业',t:'bad'}, health:{n:'身体亮红灯',t:'bad'}, burnout:{n:'职业倦怠',t:'bad'},
+ blame:{n:'背锅被开',t:'bad'}, startup_bad:{n:'创业失败',t:'bad'},
+ moyu:{n:'摸鱼之神',t:'hidden'}, bankrupt:{n:'公司先倒了',t:'hidden'}, noncompete:{n:'竞业协议',t:'hidden'},
+ angel:{n:'天使投资人',t:'good'}, spinoff:{n:'分拆独立',t:'good'},
+ abroad:{n:'定居海外',t:'mid'}, phd:{n:'回炉读博',t:'mid'}, soe:{n:'国企数科',t:'mid'},
+ ai_replaced:{n:'被 AI 取代',t:'bad'}, gig:{n:'灵活就业',t:'bad'},
+ arbitration:{n:'仲裁赢了',t:'hidden'}, lottery:{n:'锦鲤附体',t:'hidden'},
+};
+
+/* ============ 抽卡 ============ */
+function roll(){
+  let odds = 1;
+  const ep = (list,x,wf=y=>y.w) => wf(x) / list.reduce((a,y)=>a+wf(y),0);
+  const edu = wpick(EDUS); odds *= ep(EDUS,edu);
+  // 稀有身份先抽，它会决定入职方式
+  let rare = null;
+  for(const r of RARES){ if(!rare && (!r.needTop || edu.top || edu.genius) && chance(r.p)){ rare = r; odds *= r.p; } }
+  const wfE = x => x.w(edu); let entry;
+  const byName = n => ENTRIES.find(e => e.n === n);
+  if(rare && rare.key==='vet') entry = Object.assign({}, byName('社招跳槽'), {n:'社招回流', d:'在别家大厂做到高 P，被老东家高薪挖了回来'});
+  else if(rare && rare.key==='genius') entry = Object.assign({}, byName('校招 SP'), {n:'天才少年特招', d:'跳过常规流程，CTO 亲自面试'});
+  else {
+    entry = wpick(ENTRIES,wfE); odds *= ep(ENTRIES,entry,wfE);
+    if(rare && rare.key==='kin' && entry.out) entry = byName(edu.genius ? '社招跳槽' : '实习留用');
+  }
+  const comp = wpick(C); odds *= ep(C,comp);
+  const wfR = x => (x.algo && edu.low) ? 2 : x.w; const role = wpick(ROLES,wfR); odds *= ep(ROLES,role,wfR);
+  const fam = wpick(FAMS); odds *= ep(FAMS,fam);
+  const nT = chance(.4) ? 2 : 1, pool = [...TRAITS], traits = [];
+  for(let i=0;i<nT;i++) traits.push(pool.splice(rnd(0,pool.length-1),1)[0]);
+  odds *= nT===1 ? .6/10 : .4/45;
+  const bw = comp.biz.map(b => entry.edge ? (b[1]===0?1:0) : entry.lv ? [1,3,6][b[1]] : [2,4,3][b[1]]);
+  const tot = bw.reduce((a,b)=>a+b,0); let x = R()*tot, bizIdx = 0;
+  for(let i=0;i<bw.length;i++){ x -= bw[i]; if(x<0){ bizIdx = i; break; } }
+  odds *= bw[bizIdx]/tot;
+  return {edu,entry,comp,role,fam,traits,rare,bizIdx,odds};
+}
+
+/* ============ 状态 ============ */
+let s = null;
+const has = t => s.traits.some(x => x.n === t);
+const bizSt = () => s.biz[s.bizIdx].st;
+const curPay = () => s.out ? 16 : s.comp.pay[s.lvIdx] * s.mult;
+const lvLabel = () => s.out ? '外包驻场' : s.comp.lv[s.lvIdx];
+const lastPv = () => s.reviews.length ? s.reviews[s.reviews.length-1] : .5;
+const isRare = k => s.rare && s.rare.key === k;
+
+function startGame(r){
+  const e = r.edu, c = r.comp;
+  let lvIdx = c.base + (e.master ? c.mb : 0) + (r.entry.lv||0) + (e.genius?1:0);
+  if(e.low && c.base > 0) lvIdx = c.base - 1;
+  let age = e.age + (r.entry.age||0);
+  s = {
+    roll:r, comp:c, role:r.role, fam:r.fam, edu:e, traits:r.traits, rare:r.rare,
+    biz: c.biz.map(b => ({n:b[0],st:b[1],tr:b[2],eq:0,dead:false})), bizIdx:r.bizIdx,
+    lvIdx: Math.min(lvIdx, c.exec-2), out: !!r.entry.out, mult: r.entry.mult||1,
+    abi: rnd(...e.abi), hp: rnd(78,92), san: clamp(rnd(70,85)+(e.san||0)+(r.fam.san||0)),
+    net: clamp(rnd(30,45)+(e.net||0)), boss: clamp(rnd(45,55)+(r.entry.boss||0)),
+    hair: rnd(80,95), money: (r.fam.money||0) + (r.entry.money||0) + rnd(1,5),
+    age, startAge:age, year:2026, q:3, turn:0, compQ:0,
+    qs:[], reviews:[], grades:[], sinceProm:0, lowStreak:0, pip:false,
+    blame:0, moyu:0, strat:'normal', acted:false, qmod:0, queue:[], pendingFinish:false,
+    flags:{}, cd:{}, cold:0, wave:0, visited:[], sport:{}, sAch:[], pets:[], inv:{bank:0,index:0,stock:0,pe:0}, juanStreak:0, actedW:false, actedL:false, aiRisk:false, timers:[], optGrant:0, aiVal:1, hunts:0, unemployed:false, over:false,
+    st:{juan:0,moyuTot:0,q:0,companies:1,transfers:0,top:0,bottom:0,ride:false,promos:0,maxMoney:0}, log:[],
+  };
+  if(r.rare){
+    if(r.rare.key==='kin'){ s.boss = 75; s.net = clamp(s.net-15); }
+    if(r.rare.key==='genius'){ s.abi = 93; s.lvIdx = Math.min(c.exec-2, s.lvIdx+2); s.mult = 1.4; s.san -= 10; s.out=false; }
+    if(r.rare.key==='vet'){ s.age = s.startAge = 33; s.lvIdx = c.exec-2; s.money += 380; s.abi = 80; s.hair = 45; s.hp -= 10; s.out=false; }
+  }
+  s.cohort = makeCohort(); s.friends = []; s.others = [];
+  if(HAS_DOM){ $('log').innerHTML=''; }
+  log('入职', `你加入了${c.n}，${s.out?'身份是外包驻场':`职级 ${lvLabel()}（共 ${c.lv.length} 档，升到 ${c.lv[c.exec]} 算进入高管层）`}，分到「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}），岗位是${s.role.n}。`, 'head');
+  log('', `工牌照片拍得不太好看。HR 说：“欢迎加入，这里是一个特别有活力的地方。”`);
+  if(s.out) log('', '你的工牌是另一种颜色，有些会议室刷不开。转正要看绩效和运气。','warn');
+  if(r.rare) log('', `稀有身份：${r.rare.n}。${r.rare.d}。`,'good');
+  meetFriend(pick(s.cohort), '职场发小', true);
+  render();
+}
+
+/* ============ 日志 ============ */
+const NAMES = {abi:'能力',hp:'健康',san:'精神',net:'人脉',boss:'老板好感',hair:'头发'};
+function fx(o){
+  const parts = [];
+  for(const k in o){
+    const v = o[k]; if(!v) continue;
+    if(k==='qmod'){ s.qmod += v; parts.push(`本季表现 ${sign(v)}`); continue; }
+    if(k==='money'){ s.money = r1(s.money+v); parts.push(`存款 ${sign(v)} 万`); continue; }
+    s[k] = clamp(s[k]+v); parts.push(`${NAMES[k]} ${sign(v)}`);
+  }
+  return parts.join(' · ');
+}
+function tlabel(){ return `${s.year}·Q${s.q}`; }
+function log(t, text, cls='', sub=''){
+  s.log.push({t,text,cls,sub});
+  if(!HAS_DOM) return;
+  const d = document.createElement('div');
+  d.className = 'ln ' + cls;
+  d.innerHTML = `<div class="t">${t}</div><div class="x">${text}${sub?`<span class="fx">${sub}</span>`:''}</div>`;
+  $('log').appendChild(d);
+}
+const L = (text, sub='', cls='') => log('', text, cls, sub);
+const LP = (pairs, cls='') => { const [t,e,c] = pick(pairs); L(t, fx(e), c||cls); };
+function ask(title, text, opts){ if(s.over) return; s.queue.push({title,text,opts}); }
+
+/* ============ 季度主循环 ============ */
+const STRAT = {
+  juan:  {n:'卷',   perf:12, hp:-3.4, san:-2.8, hair:-1.6, abi:1.5},
+  normal:{n:'正常', perf:0,  hp:-1.0, san:-.9,  hair:-.5,  abi:.8},
+  moyu:  {n:'摸鱼', perf:-12,hp:1.4,  san:1.4,  hair:0,    abi:.2},
+};
+
+function nextQuarter(){
+  if(s.over || s.queue.length || s.unemployed) return;
+  s.turn++; s.q++; if(s.q>4){ s.q=1; s.year++; }
+  s.st.q++; s.compQ++; s.sinceProm++; s.actedW=false; s.actedL=false;
+  if(s.turn % 4 === 0) s.age++;
+  log('', `${s.year} 年 第 ${s.q} 季度 · ${s.age} 岁`, 'div');
+  economy(); drift(); petTick(); hobbyTick(); evolveBiz(); cohortTick();
+  if(s.q===4) settleInvest();
+  // 定时事件
+  s.timers = s.timers.filter(t => { if(t.at <= s.turn){ t.f(); return false; } return true; });
+  if(s.wave > 0) s.wave--;
+  if(s.blame > 0 && s.turn - (s.blameAt||0) >= 8){ s.blame--; s.blameAt = s.turn; L('时间过去了，那口旧锅渐渐没人提了。', `背锅 ${s.blame}/3`); }
+  if(s.turn % 4 === 0) ageEvents();
+  if(s.comp.unicorn) unicornTick();
+  if(s.comp.spinoff && s.spin) spinTick();
+  if(s.over) return render();
+  randomEvents();
+  if(s.queue.length) s.pendingFinish = true; else finishQuarter();
+  render();
+}
+
+function economy(){
+  const inc = curPay()/4*.42;
+  const cost = s.fam.cost + (s.flags.house?4:0) + (s.flags.kid?3:0);
+  s.money = r1(s.money + inc - cost);
+  if(s.comp.unicorn) s.optGrant += curPay()*.12;
+  if(s.money < 0 && invTotal() > 0){
+    let need = -s.money;
+    for(const k of ['bank','index','stock','pe']){ const t = Math.min(need, s.inv[k]); s.inv[k] = r1(s.inv[k]-t); s.money = r1(s.money+t); need -= t; if(need<=0) break; }
+    L('现金不够用了，你赎回了一部分投资。');
+  }
+  if(s.money < 0) s.san = clamp(s.san-2);
+  s.st.maxMoney = Math.max(s.st.maxMoney, s.money);
+}
+
+function drift(){
+  const st = STRAT[s.strat], w = s.comp.work;
+  let hp = st.hp<0 ? st.hp*w : st.hp, san = st.san<0 ? st.san*w : st.san;
+  if(s.strat==='juan' && has('卷王体质')){ hp *= .55; san *= .7; }
+  const b = bizSt();
+  if(b===2){ hp -= .8; san -= .4; } else if(b===0){ hp += .4; san -= .5; }
+  if(s.age>=32) hp -= .5; if(s.age>=40) hp -= .8;
+  if(isRare('kin')) san -= .4;
+  hp += (75-s.hp)*.035; san += (62-s.san)*.04;
+  s.hp = clamp(s.hp+hp); s.san = clamp(s.san+san);
+  s.hair = clamp(s.hair + st.hair*(has('发量浓密')?.4:1) - (s.age>30?.3:0));
+  s.abi = clamp(s.abi + st.abi*(1-s.abi/115)*(has('技术洁癖')?1.4:1));
+  s.boss = clamp(s.boss + (50-s.boss)*.03);
+  if(s.strat==='juan'){ s.st.juan++; s.juanStreak++; } else s.juanStreak = 0;
+  if(s.strat==='moyu'){ s.moyu++; s.st.moyuTot++; } else s.moyu = 0;
+}
+
+function qScore(){
+  let v = 50 + (s.abi-55)*.55 + STRAT[s.strat].perf + (s.boss-50)*.3 + [-4,0,4][bizSt()] + s.qmod + rf(-13,13);
+  if(has('卷王体质') && s.strat==='juan') v += 3;
+  if(has('摸鱼大师') && s.strat==='moyu') v += 6;
+  if(has('锦鲤')) v += 2;
+  if(s.hp < 30) v -= 6; if(s.san < 25) v -= 6;
+  return v;
+}
+
+function finishQuarter(){
+  s.pendingFinish = false;
+  if(s.over || s.unemployed) return;
+  s.qs.push(qScore()); s.qmod = 0;
+  if(s.comp.rev.includes(s.q)) review();
+  if(s.over || s.unemployed) return;
+  promoCheck();
+  if(s.over) return;
+  if(endChecks()) return;
+  if(!s.queue.length) layoffCheck();
+  if(!s.unemployed) fireCheck();
+}
+
+function endChecks(){
+  if(s.hp <= 0){ end('health'); return true; }
+  if(s.san <= 0){ end('burnout'); return true; }
+  if(s.blame >= 3){ end('blame'); return true; }
+  if(s.moyu >= 40){ end('moyu'); return true; }
+  if(s.age >= 60){ end(s.comp.foreign ? 'foreign' : 'fossil'); return true; }
+  return false;
+}
+
+/* ============ 业务演化 ============ */
+function evolveBiz(){
+  const alive = s.biz.filter(b=>!b.dead);
+  s.biz.forEach((b,i) => {
+    if(b.dead) return;
+    const mine = i === s.bizIdx;
+    b.eq = b.st===0 ? b.eq+1 : 0;
+    if(b.st===0 && b.tr>=.9 && chance(.035)){
+      b.st = 2; b.tr = .3;
+      L(`「${b.n}」突然爆了。CEO 在全员会上宣布：这是公司级一号工程。`, mine?'你所在的业务一夜之间从边缘变成了核心':'', mine?'good':'head');
+      if(mine){ s.st.ride = true; fx({san:8,qmod:8}); }
+      return;
+    }
+    if(chance(.07)){
+      const up = chance(clamp(.5+.3*b.tr,.05,.95));
+      const ns = clamp(b.st+(up?1:-1),0,2);
+      if(ns !== b.st){
+        b.st = ns;
+        const txt = up ? `「${b.n}」被战略加码，升为${STN[ns]}业务。` : `「${b.n}」资源收缩，降为${STN[ns]}业务。`;
+        L(txt, mine ? (up?'你的业务地位上升了':'你的业务开始被边缘化') : '', mine ? (up?'good':'warn') : '');
+        if(mine && up) s.st.ride = s.st.ride || ns===2;
+      }
+    }
+    if(b.st===0 && b.eq>=4 && alive.length>2 && chance(b.tr<0?.1:.05)){
+      b.dead = true;
+      if(mine){
+        log('', `公司宣布：「${b.n}」整体裁撤，相关同学"妥善安置"。`, 'bad');
+        ask('业务被裁撤', `你所在的「${b.n}」没了。HR 说可以内部活水，但名额有限。`, [
+          {t:'抢一个活水名额', f:()=>{
+            const tg = s.biz.map((x,j)=>({x,j})).filter(o=>!o.x.dead && o.j!==s.bizIdx);
+            if(chance(.45+lastPv()*.3) && tg.length){ const o = pick(tg); moveBiz(o.j); L(`你抢到了「${o.x.n}」的名额。`,'','good'); }
+            else { L('名额被别人抢光了。','','bad'); leaveMenu('laid'); }
+          }},
+          {t:'拿 N+1 走人', f:()=>leaveMenu('laid')},
+        ]);
+      } else L(`「${b.n}」被整体裁撤。`, '', 'warn');
+    }
+  });
+}
+function moveBiz(j){ if(!s.biz[j] || s.biz[j].dead) return; s.bizIdx = j; s.boss = rnd(45,58); s.st.transfers++; }
+
+/* ============ 绩效 / 晋升 ============ */
+function review(){
+  const c = s.comp, sc = avg(s.qs); s.qs = [];
+  if(s.out){
+    if(sc >= 52 && chance(.35)){ const b0 = curPay(); s.out = false; s.lvIdx = 0; s.sinceProm = 0; L(`外包转正成功！你拿到了正式工牌：${lvLabel()}。年包 ${Math.round(b0)} 万 → ${Math.round(curPay())} 万`, fx({san:12}), 'good'); }
+    else L('外包没有绩效，只有"续约"。你续上了。', '', '');
+    s.reviews.push(.5); return;
+  }
+
+  let cal = rf(-16,16) + (s.boss-50)*.12 + (s.cold>s.turn?-6:0);
+  const quota = chance(.35) ? (bizSt()===2 ? 6 : bizSt()===0 ? -7 : pick([-5,5])) : 0;
+  const fsc = sc + cal + quota;
+  let why = '';
+  if(quota>0) why = '业务今年表现好，团队拿到了更多高绩效名额。';
+  else if(quota<0) why = pick(['今年部门高绩效名额被砍了一半。','HR 要求严格执行强制分布，低档必须有人。']);
+  if(cal>=10) why += pick(['校准会上，老板为你据理力争。','你负责的项目恰好被大老板在会上表扬了。']);
+  else if(cal<=-10) why += pick(['校准会上，你的名额被让给了"更需要激励"的同事。','老板说：“今年组里名额太少，你理解一下。”','隔壁组总监在校准会上提了一句你的项目延期。','你的自评写得太谦虚了。']);
+  // 强制分布：按你在同事中的百分位落档
+  const peer = 60 + (s.out?0:s.lvIdx/c.exec)*14 + (isRare('genius')?6:0); // 同级同事的平均水平，职级越高越强
+  const pct = normCdf((fsc - peer) / 15);
+  let idx = 0, acc = 0;
+  for(let i=0;i<c.dist.length;i++){ acc += c.dist[i]; if(pct <= acc){ idx = i; break; } idx = i; }
+  if(isRare('kin')) idx = Math.max(idx, Math.floor((c.g.length-1)/2));
+  const pv = idx/(c.g.length-1);
+  s.reviews.push(pv); s.grades.push(c.g[idx]);
+  const period = c.rev.length===4 ? `${s.year} Q${s.q}` : c.rev.length===2 ? `${s.year} ${s.q===2?'上半年':'下半年'}` : `${s.year} 年度`;
+  const cls = pv>=.8 ? 'good' : pv===0 ? 'bad' : pv<.45 ? 'warn' : '';
+  const cm = pv>=.99 ? '顶格绩效。你在工位上愣了三秒。' : pv>=.7 ? '高于预期，老板在 1:1 里夸了你。' : pv>=.4 ? '符合预期。不好不坏，就是大多数人。' : pv>0 ? '低于预期。HR 发来一封"沟通邀请"。' : '最低档。你知道这意味着什么。';
+  const bm = [.7,1,1.35][bizSt()];
+  const bonus = r1(curPay()*.25/c.rev.length*(.1+2.2*Math.pow(pv,1.6))*bm*.5);
+  s.money = r1(s.money + bonus);
+  log('', `【绩效】${period}：${c.g[idx]}`, 'perf '+cls, `${why?why+' ':''}${cm}${bonus>=.5?` 奖金到账 ${bonus} 万。`:''}`);
+  if(pv>=.8) fx({san:6, boss:3}); if(pv===0) fx({san:-8});
+  if(pv>=.99) s.st.top++;
+  if(pv===0){ s.st.bottom++; s.lowStreak++; } else s.lowStreak = 0;
+  if(s.pip){
+    s.pip = false;
+    if(pv===0){ L('PIP 没过。HR 把离职单推到你面前。','','bad'); leaveMenu('fired'); return; }
+    L('PIP 过了。你活下来了。', fx({san:5}), 'good');
+  }
+  if(c.id==='ali' && s.grades.length>=2 && s.grades.slice(-2).every(g=>g==='3.75') && s.lvIdx < c.exec){
+    L('连续两个季度 3.75，触发"直接晋升"规则。', '', 'good'); promote(); s.grades.push('·'); return;
+  }
+  if(s.lowStreak >= 2 && !isRare('kin')){
+    s.lowStreak = 0;
+    ask('PIP', 'HR 约你进了一个没有窗户的会议室，桌上放着一份《绩效改进计划》。', [
+      {t:'签字，拼一把', sub:'下次绩效再垫底就走人', f:()=>{ s.pip = true; L('你签了字。接下来几个月你每天最后一个走。', fx({san:-6,qmod:8})); }},
+      {t:'不签，跟 HR 谈补偿', f:()=>{ if(chance(.5)){ L('谈下来了 N+1。'); leaveMenu('laid'); } else { L('HR：PIP 不通过只有 N。你决定自己走。'); leaveMenu('quit'); } }},
+    ]);
+  }
+}
+
+function promoCheck(){
+  const c = s.comp;
+  if(s.out || s.lvIdx >= c.exec) return;
+  const low = c.promoLow && s.lvIdx <= c.promoLow.max;
+  const qs = low ? c.promoLow.q : c.promo;
+  if(!qs.includes(s.q)) return;
+  if(s.sinceProm < (low ? 2 : 4 + Math.floor(s.lvIdx/c.exec*6))) return;
+  const rec = s.reviews.slice(-2), ap = avg(rec);
+  if(!rec.length || rec[rec.length-1] === 0 || (ap < .5 && rec[rec.length-1] < .8)){ if(chance(.5)) L('今年的晋升提名名单里没有你。'); return; }
+  ask('晋升答辩', `你被提名冲击 ${c.lv[s.lvIdx+1]}。评委是三位你没见过的总监。`, [
+    {t:'熬夜打磨 PPT', sub:'健康 −8，通过率提高', f:()=>promoRoll(.12,{hp:-8},ap)},
+    {t:'平常心去讲', f:()=>promoRoll(0,{},ap)},
+    {t:'放弃，明年再说', f:()=>L('你把名额让给了组里另一位同学。', fx({boss:2,san:2}))},
+  ]);
+}
+function promoRoll(bonus, cost, ap){
+  const c = s.comp; fx(cost);
+  let p = .26 + (s.abi-55)*.007 + ap*.28 + [-.12,0,.1][bizSt()] + (s.boss-50)*.004 + bonus - Math.pow(s.lvIdx/c.exec,1.3)*.45;
+  if(has('PPT 之神')) p += .12; if(has('社恐')) p -= .1;
+  if(s.flags.promoHelp){ p += .08; s.flags.promoHelp = false; }
+  if(s.lvIdx === c.exec-1){ p *= .45; if(s.net < 55) p *= .5; }
+  p = clamp(p,.04,.85);
+  if(chance(p)) promote();
+  else if(s.lvIdx === c.exec-1) L('高管任命的名单出来了，没有你。有人说你“业务够硬，但还差点人脉和站位”。', fx({san:-6}), 'warn');
+  else L(`答辩没过。评委反馈：“${pick(['缺少体系化思考','个人贡献不够清晰','没有体现出更大的影响力','建议沉淀一下方法论'])}”`, fx({san:-6}), 'warn');
+}
+function promote(){
+  const before = curPay();
+  s.lvIdx++; s.sinceProm = 0; s.st.promos++;
+  s.mult = Math.max(1, s.mult * .95); // 晋升后薪资按新职级重新定档，之前谈下来的溢价部分折算
+  const after = curPay();
+  L(`晋升成功：${lvLabel()}！年包 ${Math.round(before)} 万 → ${Math.round(after)} 万（+${Math.round((after/before-1)*100)}%）`, fx({san:8,net:3}), 'good');
+  if(s.lvIdx >= s.comp.exec) end('exec');
+}
+
+/* ============ 裁员 / 离职 ============ */
+function layoffCheck(){
+  if(isRare('kin')) return;
+  let p = s.comp.lay * [3,1,.4][bizSt()];
+  const lp = lastPv(); if(lp===0) p *= 3; else if(lp < .4) p *= 1.5;
+  if(s.age>=35) p *= 2; if(s.age>=40) p *= 1.5;
+  if(s.wave) p *= 3; if(s.out) p *= 2; if(s.strat==='moyu') p *= 1.4; if(s.aiRisk) p *= 1.3;
+  if(chance(p)){
+    const why = s.aiRisk && chance(.5) ? '岗位被 AI 提效替代' : s.age>=35 ? '组织年轻化' : bizSt()===0 ? '业务收缩' : '降本增效';
+    log('', `周四下午，你被拉进一个 15 分钟的会议。理由是“${why}”。工牌在 18:00 失效。`, 'bad');
+    leaveMenu('laid');
+  }
+}
+
+function fireCheck(){
+  if(s.money >= 600 && s.net >= 65 && !s.flags.angel){
+    s.flags.angel = true;
+    ask('一个饭局', '前同事创业了，饭桌上他半开玩笑：“你要不要来当我们的天使？”', [
+      {t:'辞职，专职做天使投资', f:()=>end('angel')}, {t:'算了，投点小钱就行', f:()=>L('你投了 20 万，换来一个微信群。', fx({money:-20,net:3}))},
+    ]);
+    return;
+  }
+  const nw = s.money + invTotal();
+  if(nw >= 1000 && !s.flags.fire1){
+    s.flags.fire1 = true;
+    ask('身家破千万', '你算了算存款加投资：就算再也不上班，按 4% 的取用率也够活了。', [
+      {t:'退休！', f:()=>end('fire')}, {t:'再干几年', f:()=>L('你关掉了计算器，打开了飞书……不，打开了工作软件。')},
+    ]);
+  } else if(nw >= 2500 && !s.flags.fire2){
+    s.flags.fire2 = true;
+    ask('存款两千五百万', '你已经很久没看过工资条了。', [{t:'这次真退了', f:()=>end('fire')}, {t:'工作使我快乐', f:()=>L('……真的吗？')}]);
+  }
+}
+
+function leaveMenu(kind){
+  s.queue = []; s.pendingFinish = false; s.unemployed = true;
+  if(kind==='laid'){
+    const comp = r1(curPay()/13*(Math.floor(s.compQ/4)+1+1));
+    s.money = r1(s.money + comp*.8);
+    L(`拿到 N+1 补偿，到手约 ${r1(comp*.8)} 万。`, '', '');
+  }
+  s.leaveKind = kind==='again' ? s.leaveKind : kind;
+  const o = [];
+  if(s.hunts < 3) o.push({t:'投简历找下一份', sub: s.age>=38 ? '这个年纪，难度不小' : '', f:jobHunt});
+  if(s.age <= 35 && !s.flags.civil) o.push({t:'考公 / 考编', sub:'35 岁是报名年龄线', f:civil});
+  if(kind!=='again'){ for(const f of s.friends) f.same = false; const bf = s.friends.slice().sort((a,b)=>b.bond-a.bond)[0];
+    if(bf && bf.bond>=30){ s.flags.friendHelp = true; L(`手机亮了，是${ffName(bf)}：“我听说了。别慌，我这边帮你问问机会。”`, fx({san:6}), 'good'); } }
+  if(s.leaveKind==='fired') o.unshift({t:'申请劳动仲裁', sub:'赌一把 2N', f:()=>{ if(chance(.5)) end('arbitration'); else { L('仲裁委认为公司程序合规。你白折腾了半年。', fx({san:-8})); s.leaveKind='quit'; leaveMenu('again'); } }});
+  if(s.hunts >= 3) o.push({t:'先开网约车 / 送外卖过渡', f:()=>end('gig')});
+  if(s.age <= 42 && !s.flags.soe) o.push({t:'去国企科技子公司', sub:'工资减半，稳定', f:()=>{ s.flags.soe = true; if(chance(.45 + (s.edu.top||s.edu.good ? .15 : 0))) end('soe'); else { L('国企的 HR 说：“我们更看重第一学历和年龄。”', fx({san:-4}), 'warn'); leaveMenu('again'); } }});
+  if((s.edu.top || s.edu.good || s.edu.genius) && s.age <= 33) o.push({t:'回学校读博', f:()=>end('phd')});
+  if(s.money >= 30) o.push({t:'开一家咖啡店', sub:'投入 30 万', f:shop});
+  o.push({t:'做"前大厂员工"博主', f:blogger});
+  if(s.net >= 55 && s.abi >= 65 && s.money >= 60) o.push({t:'拉几个前同事创业', f:startup});
+  o.push({t:'回老家', f:()=>end('home')});
+  o.push({t: s.leaveKind==='laid' ? '先躺平，不想了' : '先休息，去大理住一阵', f:()=>end(s.leaveKind==='laid'?'laid':'burnout')});
+  ask(kind==='quit' ? '你离职了' : kind==='again' ? '接下来呢？' : '你失业了', `${s.age} 岁，存款 ${s.money} 万。接下来做什么？`, o);
+}
+
+function jobHunt(){
+  s.hunts++;
+  let p = .4 + (s.flags.friendHelp?.12:0) + (s.abi-50)*.012 - Math.max(0,s.age-32)*.05 + lastPv()*.15 + s.net*.002 - (s.wave?.15:0);
+  if(chance(clamp(p,.05,.92))){
+    const offs = [genOffer(.95), genOffer(1.05)];
+    ask('收到 offer', '面了一个多月，终于有两家发了 offer：', offs.map(of => ({
+      t:`${of.c.n} · ${of.c.lv[of.lv]}`, sub:`「${of.c.biz[of.biz][0]}」业务（${STN[of.c.biz[of.biz][1]]}）· 年包约 ${of.pay} 万`,
+      f:()=>{ s.unemployed = false; joinCompany(of); },
+    })));
+  } else {
+    L(pick(['面了五家，三家挂在算法题，两家说"再看看"。','HR 看到年龄那一栏，礼貌地结束了通话。','终面过了，然后 HC 冻结了。']), fx({san:-6,money:-3}), 'warn');
+    leaveMenu('again');
+  }
+}
+function civil(){
+  s.flags.civil = true;
+  const p = .14 + (s.abi-50)*.006 + (s.edu.top||s.edu.good ? .05 : 0);
+  if(chance(p)) end('civil');
+  else { L('笔试第七，差 1.5 分进面。', fx({san:-5}), 'warn'); leaveMenu('again'); }
+}
+function shop(){ s.money = r1(s.money-30); s.flags.shopOk = chance(.3 + s.net*.003); end('shop'); }
+function blogger(){ s.flags.blogOk = chance(.2 + (s.lvIdx/s.comp.exec)*.15 + (has('PPT 之神')?.1:0)); end('blogger'); }
+function startup(){ end(chance(.22 + (s.abi-65)*.01 + (s.net-55)*.006) ? 'startup_ok' : 'startup_bad'); }
+
+// 跳槽定级：最多比你现在的相对职级高一档，不能直接跳进高管前一档；薪资可以靠 mult 涨
+function offerLevel(c, target){
+  const rel = s.out ? 0 : s.lvIdx / s.comp.exec;
+  const cap = Math.max(0, Math.min(c.exec-2, Math.round(rel*c.exec) + 1));
+  let lv = 0, best = 1e9;
+  c.pay.forEach((p,i) => { if(i <= cap && Math.abs(p-target) < best){ best = Math.abs(p-target); lv = i; } });
+  const mult = clamp(target / c.pay[lv], 1, 1.3);
+  return {lv, mult};
+}
+function genOffer(boost){
+  const others = C.filter(c => c.id !== s.comp.id);
+  const c = wpick(others);
+  const target = curPay() * (s.unemployed ? rf(.85,1.1) : rf(1.15,1.4)) * boost;
+  const {lv, mult} = offerLevel(c, target);
+  const bw = c.biz.map(b => [2,4,3][b[1]]); const tot = bw.reduce((a,b)=>a+b,0);
+  let x = R()*tot, biz = 0; for(let i=0;i<bw.length;i++){ x -= bw[i]; if(x<0){ biz = i; break; } }
+  return {c, lv, biz, mult, pay: Math.round(c.pay[lv]*mult)};
+}
+function offerAsk(of, title, text){
+  const delta = Math.round((of.pay/curPay()-1)*100);
+  ask(title, text, [
+    {t:`接：${of.c.n} · ${of.c.lv[of.lv]}`, sub:`「${of.c.biz[of.biz][0]}」（${STN[of.c.biz[of.biz][1]]}）· 年包约 ${of.pay} 万（${delta>=0?'+':''}${delta}%）`, f:()=>{
+      if(s.lvIdx >= Math.ceil(s.comp.exec*.6) && !s.out && chance(.2)){
+        ask('竞业协议', `${s.comp.n} 发来通知：你签过竞业协议，新公司在名单上。`, [
+          {t:'遵守竞业，在家躺两年', f:()=>end('noncompete')},
+          {t:'硬去，赌前司不追究', f:()=>{ if(chance(.4)){ L('前司起诉了你，赔了一大笔违约金。', fx({money:-rnd(60,150),san:-10}), 'bad'); } joinCompany(of); }},
+        ]);
+      } else joinCompany(of);
+    }},
+    {t:'算了，留下', f:()=>L('你把 offer 截图存进了相册，当作底气。', fx({san:3}))},
+  ]);
+}
+function joinCompany(of){
+  if(!s.unemployed) friendOnLeave();
+  if(of.c.id !== 'spin') s.spin = null;
+  s.comp = of.c; s.lvIdx = of.lv; s.out = false; s.mult = of.mult || 1;
+  s.biz = of.c.biz.map(b => ({n:b[0],st:b[1],tr:b[2],eq:0,dead:false})); s.bizIdx = of.biz;
+  s.boss = rnd(45,60); s.qs = []; s.reviews = []; s.grades = []; s.sinceProm = 0; s.lowStreak = 0; s.pip = false;
+  s.compQ = 0; s.hunts = 0; s.st.companies++; s.optGrant = 0; s.aiVal = 1; s.unemployed = false;
+  s.queue = []; // 前司的待办选择作废
+  friendOnJoin();
+  log('入职', `你加入了${of.c.n}，职级 ${lvLabel()}，「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}）。`, 'head');
+}
+
+/* ============ 分拆公司 ============ */
+function startSpinoff(){
+  const parent = s.comp, bn = s.biz[s.bizIdx].n, base = curPay();
+  const lv = Math.min(2, Math.floor(s.lvIdx/parent.exec*4));
+  const comp = {id:'spin', w:0, n:`「${bn}」独立公司`, tag:'分拆独立', d:`从${parent.n}分拆`,
+    lv:['早期成员','核心骨干','业务负责人','VP','联合创始人'], pay:[.9,1.15,1.6,2.4,3.6].map(x=>Math.round(base*x)), exec:4, base:0, mb:0,
+    g:['不及格','达标','超预期'], cut:[], dist:[.12,.58,.30], rev:[2,4], promo:[4], work:1.35, lay:.006, stock:1, spinoff:1,
+    sys:'刚分拆出来的独立公司，股份价值取决于业绩和融资', biz:[[bn,2,.3],['新业务线',1,.6],['海外拓展',0,.6]]};
+  s.spin = {parent, plv:s.lvIdx, val:1, grant:base*.8, q:0, round:0};
+  joinCompany({c:comp, lv, biz:0, pay:comp.pay[lv]});
+  L('你拿到了一份不小的股份。但它现在只是一张纸——要等公司跑出来才值钱。', '每轮融资、业绩和上市都会影响股份价值', 'head');
+}
+const ROUNDS = ['A 轮','B 轮','C 轮','Pre-IPO 轮'];
+function spinTick(){
+  const sp = s.spin; if(!sp) return;
+  sp.q++; sp.grant += curPay()*.15;
+  sp.val = Math.max(.1, sp.val * rf(.86,1.2) * (1 + (lastPv()-.5)*.1));
+  if(sp.q % 4 === 0 && sp.round < ROUNDS.length){
+    if(sp.val >= 1.1){ sp.val *= 1.25; L(`公司完成 ${ROUNDS[sp.round]} 融资，估值上涨。你的股份纸面价值约 ${r1(sp.grant*sp.val)} 万。`, fx({san:5}), 'good'); sp.round++; }
+    else if(sp.val < .7){ L(`${ROUNDS[sp.round]} 融资没谈下来，账上的钱只够烧一年。`, fx({san:-6}), 'warn'); }
+    else L(`${ROUNDS[sp.round]} 还在谈，投资人说“再看一个季度的数据”。`);
+  }
+  if(sp.round >= 3 && sp.val >= 1.5 && chance(.15)){
+    s.spinPay = r1(sp.grant*sp.val*rf(2,3.5)); s.money = r1(s.money+s.spinPay); s.spinEnd = 'ipo';
+    log('', `公司上市了！敲钟那天，你站在第二排。股份解禁后套现约 ${s.spinPay} 万。`, 'good'); end('spinoff'); return;
+  }
+  if(sp.round >= 1 && sp.val >= 1.2 && chance(.03)){
+    ask('收购要约', `${pick(C.filter(c=>c.id!==sp.parent.id)).n} 想收购你们，按当前估值溢价 30%。`, [
+      {t:'同意，套现离场', f:()=>{ s.spinPay = r1(sp.grant*sp.val*1.3); s.money = r1(s.money+s.spinPay); s.spinEnd = 'acq'; end('spinoff'); }},
+      {t:'不卖，要上市', f:()=>L('创始人在全员会上说：“我们要做一家伟大的公司。”', fx({san:3}))}]);
+    return;
+  }
+  if(sp.val < .45 && chance(.3)){
+    ask('现金流断了', '公司账上的钱撑不过下个季度。母公司愿意把团队收回去，但不是所有人都能回。', [
+      {t:'申请回母公司', f:()=>{ if(chance(.6)){ const p = sp.parent; s.spin = null; const e = p.biz.findIndex(b=>b[1]===0); joinCompany({c:p, lv:Math.max(0,sp.plv-1), biz:e>=0?e:0, pay:p.pay[Math.max(0,sp.plv-1)]}); L('你回到了母公司，职级降了一档。股份清零了。', fx({san:-8}), 'warn'); } else { s.spin = null; L('回去的名单里没有你。', '', 'bad'); leaveMenu('laid'); } }},
+      {t:'撑到最后', f:()=>{ if(chance(.35)){ sp.val = 1; L('最后一刻，一家产业资本投了进来。公司活了。', fx({san:8}), 'good'); } else { s.spin = null; L('公司宣布清算。', '', 'bad'); leaveMenu('laid'); } }}]);
+  }
+}
+
+/* ============ 年龄节点 ============ */
+function ageEvents(){
+  if(s.age === 35 && !s.flags.a35){
+    s.flags.a35 = true;
+    log('', '35 岁生日。HR 系统里，你的标签悄悄变了。', 'warn');
+    ask('35 岁', '同期入职的人，有的成了总监，有的已经离开了这个行业。你呢？', [
+      {t:'再冲一把晋升', f:()=>L('你把签名改成了"Day 1"。', fx({qmod:8,boss:5,hp:-5}))},
+      {t:'在职备考公务员（最后一年）', f:()=>{ s.flags.civil = true; if(chance(.12+(s.abi-50)*.005)) end('civil'); else L('没考上。你回到工位，假装什么都没发生。', fx({san:-5}), 'warn'); }},
+      {t:'随缘吧', f:()=>L('你开始研究保温杯和枸杞的搭配。', fx({san:4}))},
+    ]);
+  }
+  if(s.comp.foreign && s.age === 45 && !s.flags.f45){
+    s.flags.f45 = true;
+    ask('外企的下午五点', '45 岁，你已经在这家外企待了很久。准点下班，周末不回消息。', [
+      {t:'就这样待到退休', f:()=>end('foreign')}, {t:'不甘心，还想折腾', f:()=>L('你打开了招聘软件。', fx({san:-2}))},
+    ]);
+  }
+}
+
+/* ============ 独角兽 ============ */
+function unicornTick(){
+  s.aiVal = Math.max(.1, s.aiVal * rf(.85,1.25));
+  if(chance(.008 + (s.aiVal < .6 ? .03 : 0))){ end('bankrupt'); return; }
+  if(s.compQ >= 8 && chance(.012)){
+    const pay = r1(s.optGrant * s.aiVal * rf(2,6));
+    s.money = r1(s.money + pay);
+    log('', `公司上市了！敲钟那天你在交易所门口拍了张照。期权兑现约 ${pay} 万。`, 'good');
+    s.comp = Object.assign({}, s.comp, {unicorn:0, n:s.comp.n.replace('独角兽','上市公司'), lay:.012});
+  }
+}
+
+/* ============ 随机事件 ============ */
+const T = () => s.role.tech, R_ = k => s.role[k];
+const ECOM = ['ali','jd','pdd','byte','kuai','mt'];
+const EVENTS_BASE = [
+ {w:5, c:()=>T()||R_('des'), f:()=>ask('需求又变了','周五晚上八点，产品在群里 @ 了所有人：“这个需求我们换个思路……”',[
+   {t:'通宵改完', f:()=>L('周六早上六点你提交了代码。产品回复了一个 👍。', fx({hp:-6,qmod:6,boss:3}))},
+   {t:'拉上产品对齐，砍需求', f:()=>{ if(chance(.5+(s.net-50)/200)) L('需求砍掉一半，你准点下班。', fx({san:3,net:2})); else L('没砍下来，还被说“不够有 owner 意识”。', fx({boss:-5,san:-3})); }},
+   {t:'下周再说', f:()=>L('上线延期一周。周会上你被点了名。', fx({qmod:-5,san:1}))}])},
+ {w:5, c:()=>R_('pm'), f:()=>ask('方案被推翻','你做了一个月的方案，老板在评审会上看了三页就说：“方向不对。”',[
+   {t:'连夜重写', f:()=>L('新方案过了。和你最早的那版几乎一样。', fx({hp:-5,qmod:5}))},
+   {t:'坚持原方案', f:()=>{ fx({boss:-6}); s.timers.push({at:s.turn+2,f:()=>{ if(chance(.4)) L('数据证明你当初是对的。老板在周会上说“当时我们就判断……”', fx({abi:3,boss:8}),'good'); }}); L('会议室安静了十秒。'); }}])},
+ {w:5, c:()=>R_('ops'), f:()=>ask('目标上调','GMV 目标临时上调 30%。老板说：“我相信你们。”',[
+   {t:'拉群拼命', f:()=>L('你一个季度瘦了五斤。', fx({hp:-5,qmod:6}))},
+   {t:'申请更多预算', f:()=>{ if(chance(.5)) L('预算批下来了。', fx({qmod:4,net:2})); else L('财务说今年降本增效。', fx({san:-3})); }},
+   {t:'先做着看', f:()=>L('目标没完成，大家都没完成。', fx({qmod:-3}))}])},
+ {w:4, c:()=>R_('hr'), f:()=>ask('裁员名单','你被要求亲手给八个同事发离职通知。其中一个和你一起吃了两年午饭。',[
+   {t:'照办', f:()=>L('你把话术背得很熟。晚上睡不着。', fx({san:-8,boss:5}))},
+   {t:'提前给他透个风', f:()=>{ if(chance(.3)) L('事情被发现了。', fx({boss:-10,san:-3}),'warn'); else L('他提前找好了下家，请你吃了顿饭。', fx({net:6,san:2})); }}])},
+ {w:4, c:()=>T(), f:()=>ask('凌晨三点的电话','告警响了，P0 级事故，影响 2% 用户。',[
+   {t:'爬起来修', f:()=>L('四点二十恢复。复盘会上你被点名表扬。', fx({hp:-5,qmod:5,abi:1}))},
+   {t:'装没听到', f:()=>{ if(chance(.35)){ s.blame++; s.blameAt = s.turn; L('复盘会上，事故责任人一栏写的是你的名字。', fx({boss:-8,san:-4}),'bad'); } else L('同事修好了。没人发现你没在。'); }}])},
+ {w:()=>has('背锅体质')?5:1.8, f:()=>ask('锅从天上来','隔壁组的项目出了问题，周报里写的是“与你们组协同不足”。',[
+   {t:'默默背了', f:()=>{ s.blame++; s.blameAt = s.turn; L(`你背下了这口锅。（第 ${s.blame} 口）`, fx({boss:4,san:-4}), 'warn'); }},
+   {t:'拉群对线，贴聊天记录', f:()=>{ if(chance(.55)) L('证据确凿，锅甩回去了。你在群里一战成名。', fx({net:-3,san:3})); else { s.blame++; s.blameAt = s.turn; L(`对方领导级别更高。锅还是你的。（第 ${s.blame} 口）`, fx({net:-5,boss:-3}),'warn'); } }},
+   {t:'找老板私下说明', f:()=>{ if(chance(s.boss/100+.15)) L('老板帮你挡了。', fx({boss:-2})); else { s.blame++; s.blameAt = s.turn; L(`老板说“大家都是一个团队”。（第 ${s.blame} 口）`, fx({san:-3}),'warn'); } }}])},
+ {w:4, f:()=>ask('团建','部门团建，KTV 包间，总监举起了杯子。',[
+   {t:'干了', f:()=>{ if(has('酒量惊人')) L('你把总监喝趴下了。他第二天拍着你的肩说“好兄弟”。', fx({net:8,boss:6})); else L('你吐在了出租车上。', fx({hp:-4,net:4,boss:2})); }},
+   {t:'以茶代酒', f:()=>L('总监看了你一眼，没说话。', fx({net:1}))},
+   {t:'借口加班先走', f:()=>L('你回到工位，发现真的有需求。', fx({san:-1}))}])},
+ {w:3, f:()=>{ s.boss = has('向上管理大师') ? rnd(45,65) : rnd(30,55); L('组织架构调整。新老板从别的事业部空降，第一次周会就说“我们要重新梳理一下”。', '老板好感重置', 'warn'); }},
+ {w:2, f:()=>{ const was = s.boss; s.boss = 50; L('你的老板离职了，去了竞对。', was>70 ? fx({san:-4})+' · 你的靠山没了' : '', 'warn'); }},
+ {w:()=>s.abi>=60?3:1.5, c:()=>!s.unemployed, f:()=>{ const of = genOffer(1); offerAsk(of, '猎头来电', `“您好，我这边有一个非常匹配您的机会……” ${of.c.n} 开了个 offer。`); }},
+ {w:()=>s.abi>=78?3:0, c:()=>!s.unemployed, f:()=>{ const of = genOffer(1.25); offerAsk(of, '竞对挖角', `${of.c.n} 的总监约你喝了一杯咖啡，当场开价。`); }},
+ {w:()=>s.hp<55?6:0, f:()=>ask('体检报告','体检报告上的箭头，比你的 OKR 还多。',[
+   {t:'请假复查，调养一阵', f:()=>L('医生说：“少熬夜。”你笑了。', fx({hp:9,qmod:-4}))},
+   {t:'先扛着', f:()=>L('你把报告塞进了抽屉。', fx({hp:-4}))}])},
+ {w:3, c:()=>ECOM.includes(s.comp.id) && (s.q===2||s.q===4), f:()=>L(`${s.q===4?'双十一':'618'}大促，全员封闭作战。工位上堆满了能量饮料。`, fx({hp:-4,san:-2,qmod:4}))},
+ {w:3, c:()=>['byte','kuai','tx'].includes(s.comp.id) && s.q===1, f:()=>L('春节红包活动保障，你在公司过了除夕。', fx({hp:-3,san:-4,qmod:4}))},
+ {w:2.5, c:()=>s.q===1, f:()=>{ const lucky = has('锦鲤') ? .5 : .12; if(chance(lucky)) L('年会抽奖，你抽中了一等奖。', fx({money:rnd(1,3),san:5}),'good'); else L('年会抽奖，你抽中了一个公司 logo 保温杯。', fx({san:1})); }},
+ {w:2, c:()=>s.comp.stock && !s.out, f:()=>{ const up = chance(.5+(has('锦鲤')?.15:0)); const v = r1(curPay()*rf(.04,.12)); L(up?`公司股价大涨，你的股票/期权浮盈 ${v} 万。`:`公司股价暴跌，你的股票/期权缩水 ${v} 万。`, fx({money:up?v:-v, san:up?3:-3})); }},
+ {w:2, c:()=>s.comp.id==='byte' && (s.q===2||s.q===4) && !s.out, f:()=>{ const v = r1(curPay()*.06); L(`期权回购窗口开了。你卖了一部分，到手 ${v} 万。`, fx({money:v})); }},
+ {w:2, c:()=>s.comp.id==='hw' && s.q===2 && !s.out, f:()=>{ const v = r1(curPay()*.1); L(`饱和配股分红到账 ${v} 万。“以奋斗者为本”。`, fx({money:v})); }},
+ {w:2, c:()=>s.comp.id==='pdd', f:()=>L('又是一个单休的周末。你已经忘了上一次看电影是什么时候。', fx({hp:-2,san:-2}))},
+ {w:3, c:()=>T(), f:()=>ask('AI 编程工具全面铺开','公司要求所有研发使用 AI 编程助手，并开始统计"AI 代码占比"。',[
+   {t:'拥抱 AI', f:()=>L('你的提效数据进了部门周报。', fx({abi:4,qmod:4}))},
+   {t:'手写才放心', f:()=>{ s.aiRisk = true; L('老板在 1:1 里问你：“你最近的人效好像不太对？”', fx({boss:-4}),'warn'); }}])},
+ {w:2, c:()=>R_('qa')||R_('ops')||R_('des')||R_('fe'), f:()=>{ s.aiRisk = true; L('内网流传一份 PPT：《AI 时代的组织提效》。第 17 页有你的岗位名称。', fx({san:-4}), 'warn'); }},
+ {w:3, cd:5, f:()=>L(pick(['隔壁组整组被优化了。工位空了一排。','和你同期入职的同事被裁了，朋友圈发了一张工牌的照片。','茶水间的阿姨说，这周已经收了三十多个工牌。']), fx({san:-3}))},
+ {w:()=>s.strat==='moyu'?(has('摸鱼大师')||curF()?.6:3):0, f:()=>L('你在工位上刷短视频，老板从你身后走过。', fx({boss:-8,qmod:-5}), 'warn')},
+ {w:3, cd:4, f:()=>L(pick(['周五下午的 OKR 对齐会开了三个小时，对齐了"下周再对齐"。','你花了两个小时写周报，用了 14 个"抓手"。','你被拉进了第 47 个群。','新来的总监要求所有文档必须"金字塔结构"。']), fx({san:-2}))},
+ {w:()=>s.hair<55?3:0, f:()=>L('洗头的时候，你看着下水口沉默了很久。', fx({hair:-3,san:-2}))},
+ {w:2.5, c:()=>s.lvIdx>=2 && !s.out, f:()=>ask('带新人','组里来了个应届生，老板说“你来带一下”。',[
+   {t:'认真带', f:()=>L('他三个月就能独立干活了，逢人就说你是他师父。', fx({net:5,san:-2,qmod:2}))},
+   {t:'丢个文档让他自己看', f:()=>L('他每天问你八个问题。', fx({san:-3}))}])},
+ {w:3, f:()=>ask('高光项目','一个老板很重视的项目缺 owner。',[
+   {t:'主动请缨', f:()=>{ if(chance(.6+(s.abi-60)*.01)) L('项目上线，数据亮眼。你的名字出现在了全员邮件里。', fx({hp:-6,qmod:10,abi:3,boss:5}),'good'); else L('项目延期了。你成了那个“负责人”。', fx({hp:-6,qmod:-4,san:-5}),'warn'); }},
+   {t:'让给别人', f:()=>L('同事接了，后来升了。', fx({san:1}))}])},
+ {w:2, f:()=>L('你被临时抽调去救火另一个项目。', fx({hp:-3,qmod:3,net:2}))},
+ {w:()=>(s.age>=26&&s.age<=34&&!s.flags.married)?2:0, f:()=>ask('求婚','谈了两年的对象问你：“我们什么时候结婚？”',[
+   {t:'结！', f:()=>{ s.flags.married = true; L('你们在年假里办了婚礼。工作群里有人发了 200 块红包。', fx({san:10,money:-15}),'good'); }},
+   {t:'等升完职再说', f:()=>L('对方沉默了。', fx({san:-4}))}])},
+ {w:()=>(s.money>=150&&!s.flags.house&&s.age>=26)?2.5:0, f:()=>{ const down = Math.round(Math.min(s.money*.7,300)); ask('买房','中介说：“现在是最低点，再不上车就晚了。”',[
+   {t:`上车，首付 ${down} 万`, f:()=>{ s.flags.house = true; L('你背上了 30 年房贷，从此每季度还款约 4 万。', fx({money:-down,san:4})); }},
+   {t:'再等等', f:()=>L('你继续租房，房东又涨了 300。')}]); }},
+ {w:()=>(s.flags.married&&!s.flags.kid&&s.age<40)?2:0, f:()=>ask('要孩子','爸妈在饭桌上第三次提起这件事。',[
+   {t:'要', f:()=>{ s.flags.kid = true; L('孩子出生了。你在产房外回了三封邮件。', fx({san:6,hp:-4})); }},
+   {t:'再说吧', f:()=>L('饭桌上安静了。')}])},
+ {w:()=>s.fam.parents?3:(s.age>30?1:0), f:()=>L('父亲住院了。你请了一周假，往返了两次老家。', fx({money:-rnd(5,20),san:-5,qmod:-3}),'warn')},
+ {w:()=>(s.age>=27&&s.age<=33&&!s.flags.married)?1.5:0, f:()=>L('你妈给你安排了一场相亲。对方问你：“你们公司是 996 吗？”', fx({san:-1}))},
+ {w:2, f:()=>L(`CEO 发了一封全员信：“${pick(['我们要始终保持创业心态。','不要躺在过去的功劳簿上。','组织必须保持饥饿感。','今天是第一天，永远是第一天。','我们正处在最好的时代，也处在最危险的时刻。'])}”`, fx({san:-1}))},
+ {w:2, f:()=>LP([['内网论坛上，有人匿名爆料某高管的八卦。你吃瓜吃到凌晨一点。',{san:2}],['你在匿名职场社区上看到有人吐槽你们组，评论区吵翻了，有几条说的好像就是你。',{san:-3}],['匿名区有人夸你们组的产品做得好，你偷偷点了个赞。',{san:2}]])},
+ {w:()=>lastPv()<.4?3:0, f:()=>L('HR 约你“随便聊聊”，问你“最近状态怎么样”。', fx({san:-4}),'warn')},
+ {w:()=>bizSt()===2?3:0, f:()=>{ const v = r1(curPay()*.03);
+   if(s.cold > s.turn) L('业务数据暴涨，部门按人头发了红包。庆功会上，新总监感谢了所有人——除了你。', fx({money:v,san:-2}));
+   else L(`「${s.biz[s.bizIdx].n}」数据暴涨，你的直属老板在群里发了个大红包。`, fx({qmod:5,money:v,san:3}),'good'); }},
+ {w:()=>(lastPv()>=.8 && s.cold<=s.turn)?2:0, f:()=>L('你被评为季度优秀员工，奖品是一个奖杯和一张合影。', fx({net:5,san:3}),'good')},
+ {w:()=>s.lvIdx>=2?1.5:0, f:()=>ask('站队','两位总监明争暗斗，其中一位私下约你吃饭。',[
+   {t:'跟他干', f:()=>{ const cid = s.comp.id; s.timers.push({at:s.turn+2,f:()=>{
+      if(s.unemployed || s.over || s.comp.id!==cid) return;
+      if(chance(.5)){ L('你站对了。那位总监升了 VP，你成了嫡系。', fx({boss:15,qmod:6}),'good'); return; }
+      const edge = s.biz.findIndex((b,i)=>!b.dead && b.st===0 && i!==s.bizIdx);
+      const o = [];
+      if(edge>=0) o.push({t:`跟他去「${s.biz[edge].n}」`, sub:'边缘业务，但他还记得你', f:()=>{ moveBiz(edge); s.boss = 72; L(`你跟着他去了「${s.biz[edge].n}」。工位靠窗，会很少。`, fx({san:-2})); }});
+      o.push({t:'留下，夹着尾巴做人', sub:'接下来一年会被冷落', f:()=>{ s.cold = s.turn+4; L('新上来的总监在周会上没再点过你的名。', fx({boss:-15,san:-5}),'warn'); }});
+      ask('站错队了', `那位总监输了，被调去了${edge>=0?`边缘业务「${s.biz[edge].n}」`:'一个闲职'}。你成了"他的人"。`, o);
+    }}); L('你们碰了个杯。'); }},
+   {t:'保持中立', f:()=>L('你决定只做事。', fx({net:-1}))}])},
+ {w:()=>has('社恐')?3:0, f:()=>L('老板让你主持下周的全组周会。你提前三天开始失眠。', fx({san:-5}))},
+ {w:()=>(has('技术洁癖')&&T())?3:0, f:()=>ask('屎山','你接手的模块，是五年前的代码，注释写着“先这样”。',[
+   {t:'重构', f:()=>L('代码干净了，但需求延期，老板不太高兴。', fx({abi:3,qmod:-3,boss:-3}))},
+   {t:'忍了', f:()=>L('你在注释里也写了“先这样”。', fx({san:-3}))}])},
+ {w:2, f:()=>L('周末被拉进 OnCall 群，手机响了一整天。', fx({hp:-2,san:-3}))},
+ {w:()=>has('锦鲤')?1.5:.3, f:()=>L('你摇号中了车牌。同事说你该去买彩票。', fx({san:6}),'good')},
+ {w:()=>s.comp.foreign?3:0, f:()=>{ s.wave = 3; L('总部发来邮件：将对中国区研发进行“战略调整”。Townhall 上没人提问。', fx({san:-5}),'warn'); }},
+ {w:()=>s.comp.unicorn?3:0, f:()=>LP([['公司发布新模型，在社交媒体上刷屏。',{san:4,qmod:3}],['竞品宣布降价 90%，公司连夜开会。',{san:-3,hp:-2,qmod:2}],['新一轮融资到账，估值又翻了一倍。',{san:4}]])},
+ {w:()=>s.wave?0:.8, f:()=>{ s.wave = 4; L('行业寒冬：各家大厂都在“降本增效”，猎头的电话少了。', '接下来一年裁员风险上升', 'head'); }},
+ {w:1.5, c:()=>!s.out, f:()=>ask('活水窗口','内部活水系统开放了。你可以申请调去别的业务。',[
+   {t:'去看看', f:()=>transferMenu()}, {t:'不了', f:()=>{}}])},
+ {w:()=>{ const core = s.biz.findIndex((b,i)=>!b.dead && b.st===2 && i!==s.bizIdx); return (core>=0 && bizSt()<2) ? 1.5 : 0; }, f:()=>{
+   const j = s.biz.findIndex((b,i)=>!b.dead && b.st===2 && i!==s.bizIdx);
+   ask('一号工程抽调',`「${s.biz[j].n}」在全公司抽人，你在名单上。`,[
+     {t:'去', f:()=>{ moveBiz(j); L(`你调去了「${s.biz[j].n}」。`, fx({hp:-4,san:2}),'good'); }},
+     {t:'留在原团队', f:()=>L('老板说“谢谢你的信任”。', fx({boss:5}))}]); }},
+ {w:()=>(s.aiRisk && !s.out && !s.flags.kb)?1.2:0, f:()=>{ s.flags.kb = true; const cid = s.comp.id; ask('知识沉淀','老板要求每个人把自己的工作流程写成标准化文档，“沉淀到 AI 知识库”。',[
+   {t:'认真写', f:()=>{ L('你写了 47 页，验收评价“非常完整”。', fx({qmod:4,boss:4})); s.timers.push({at:s.turn+2, f:()=>{ if(!s.over && !s.unemployed && s.comp.id===cid && chance(.45)) end('ai_replaced'); }}); }},
+   {t:'写得含糊一点', f:()=>L('老板说你的文档“缺少可执行性”。', fx({boss:-5,san:2}))}]); }},
+ {w:()=>(!s.flags.abroad && !s.out && s.age>=25 && s.age<=42 && ['byte','kuai','mt','pdd','ali','tx','hw','mi'].includes(s.comp.id))?1.2:0, f:()=>{
+   s.flags.abroad = true; const cid = s.comp.id;
+   ask('外派机会', `${pick(['新加坡','迪拜','圣保罗','雅加达','利雅得'])}的海外团队缺人，外派补贴翻倍。`, [
+     {t:'去', f:()=>{ L('你拖着两个行李箱上了飞机。', fx({money:r1(curPay()*.3),san:4,net:-3})); s.timers.push({at:s.turn+8, f:()=>{ if(!s.over && !s.unemployed && s.comp.id===cid) ask('外派期满','两年过去了。总部问你要不要回国。',[{t:'留在海外', f:()=>end('abroad')},{t:'回国', f:()=>L('你回到了熟悉的工位，发现一半的人已经不认识了。', fx({net:-2}))}]); }}); }},
+     {t:'不去', f:()=>{}}]); }},
+ {w:()=>(s.st.ride && !s.flags.spin && !s.out && s.lvIdx >= Math.floor(s.comp.exec*.4) && bizSt()===2)?1.2:0, f:()=>{
+   s.flags.spin = true;
+   ask('分拆独立', `「${s.biz[s.bizIdx].n}」要分拆成独立公司融资，负责人邀请你作为早期成员一起出去。`, [
+     {t:'跟着出去', f:()=>{ if(chance(.7)) startSpinoff(); else L('融资没谈成，分拆计划搁置了。', fx({san:-4})); }},
+     {t:'留在母公司', f:()=>L('你选了稳。', fx({san:1}))}]); }},
+ {w:()=>has('锦鲤')?.15:.012, once:1, f:()=>end('lottery')},
+ /* ---------- 公司专属 ---------- */
+ {w:3, c:()=>s.comp.id==='byte', cd:6, f:()=>L(pick(['双月 OKR 复盘，你的 O 被上级的上级改了三次。','你的文档被 140 个人同时在线评论，其中 60 条是“+1”。',(s.compQ>=8?'组织架构又调整了，这是你入职以来第五次换汇报线。':'组织架构又调整了，你入职不久就换了汇报线。'),'“务实浪漫”的海报贴满了电梯间。']), fx({san:-2}))},
+ {w:3, c:()=>s.comp.id==='ali', once:1, f:()=>L(`你有了自己的花名：「${pick(['逍遥','若水','青松','南乔','子墨','无忌','听风'])}」。从此没人叫你真名。`, fx({san:2}))},
+ {w:3, c:()=>s.comp.id==='ali', f:()=>ask('价值观考核','考核里价值观和业绩各占一半。你需要写三个“拥抱变化”的案例。',[
+   {t:'认真复盘写案例', f:()=>L('主管评语：“案例真实，有温度。”', fx({qmod:3,san:-2}))},
+   {t:'套用去年的模板', f:()=>{ if(chance(.4)) L('主管认出来了。价值观打了个低分。', fx({qmod:-7,boss:-4}),'warn'); else L('没人发现。', fx({san:1})); }}])},
+ {w:3, c:()=>s.comp.id==='tx', cd:10, f:()=>ask('赛马','你们组和隔壁工作室在做同一个方向的产品，上面说“让市场来决定”。',[
+   {t:'全力赛马', f:()=>{ if(chance(.5)) L('你们赢了，隔壁组被并了进来。', fx({hp:-5,qmod:10,net:3}),'good'); else { const b = s.biz[s.bizIdx]; b.st = Math.max(0,b.st-1); L(`你们输了，项目被砍。「${b.n}」的地位也跟着下滑了。`, fx({hp:-5,san:-6}),'bad'); } }},
+   {t:'私下和隔壁组交换情报', f:()=>L('两边都没赢，但你多了一群朋友。', fx({net:6}))}])},
+ {w:2.5, c:()=>s.comp.id==='tx' && s.compQ>=4, once:1, f:()=>L('入职周年，你收到了一只限量版企鹅公仔。', fx({san:3}))},
+ {w:3, c:()=>s.comp.id==='mt', cd:10, f:()=>ask('下一线','公司倡导“离一线近一点”，你可以报名去城市站跑一周商户。',[
+   {t:'报名', f:()=>L('你一周跑了 80 家餐馆，学会了用三句话说服老板上线新功能。', fx({abi:4,hp:-3,net:3}))},
+   {t:'工作太忙了', f:()=>L('报名的同事在周会上分享了一线见闻，老板很满意。', fx({boss:-2}))}])},
+ {w:3, c:()=>['mt','jd','ali'].includes(s.comp.id), cd:12, f:()=>L('外卖大战升级，补贴预算一夜翻倍。你的需求池里多了 30 个“紧急”。', fx({hp:-3,qmod:3}))},
+ {w:3, c:()=>s.comp.id==='bd', cd:10, f:()=>ask('All in AI','全员信要求所有业务“用大模型重做一遍”。你的模块也在名单里。',[
+   {t:'主动牵头改造', f:()=>L('你的方案被选为内部标杆案例。', fx({abi:4,qmod:5,hp:-4}),'good')},
+   {t:'先做个 demo 交差', f:()=>L('demo 在汇报会上跑崩了。', fx({qmod:-4,san:-2}))}])},
+ {w:3, c:()=>s.comp.id==='pdd', f:()=>ask('商家的礼物','一个商家给你寄了一箱“土特产”，箱底压着一个信封。',[
+   {t:'原封不动退回并上报', f:()=>L('合规部门发来感谢邮件。', fx({boss:3,san:2}))},
+   {t:'收下土特产，退回信封', f:()=>{ if(chance(.3)){ s.blame++; s.blameAt = s.turn; L('审计还是找你谈话了。', fx({boss:-8,san:-6}),'bad'); } else L('土特产挺好吃的。'); }}])},
+ {w:2, c:()=>s.comp.id==='pdd', cd:6, f:()=>L('考勤系统显示你本月日均在岗 13.2 小时，排名部门第 41。', fx({san:-3}))},
+ {w:3, c:()=>s.comp.id==='jd', cd:10, f:()=>ask('一线体验日','公司号召员工去一线当一天快递员或骑手。',[
+   {t:'去送一天', f:()=>L('你送了 46 单，晚上腿疼得睡不着，但第一次觉得自己写的系统很具体。', fx({abi:2,hp:-3,san:3}))},
+   {t:'请假', f:()=>L('朋友圈里全是同事穿工服的照片。')}])},
+ {w:3, c:()=>s.comp.id==='hw', once:1, f:()=>ask('奋斗者协议','HR 发来一份《奋斗者自愿申请书》：自愿放弃带薪年假和加班费。',[
+   {t:'签', f:()=>L('你成了“奋斗者”，配股额度提高了。', fx({qmod:5,san:-3,boss:4}))},
+   {t:'不签', f:()=>L('主管看了你一眼：“想清楚就好。”', fx({boss:-6}))}])},
+ {w:2.5, c:()=>s.comp.id==='hw', cd:6, f:()=>L('项目攻坚期，你在工位下面铺了一张床垫。', fx({hp:-4,qmod:4}))},
+ {w:3, c:()=>s.comp.id==='mi', cd:6, f:()=>LP([['发布会倒计时 14 天，全员进入冲刺状态。',{hp:-3,qmod:4}],['新车交付目标上调，你被抽调去支援交付系统。',{hp:-3,qmod:3,san:-1}],['你在发布会直播里看到自己做的功能，只露出了 3 秒，但你还是截了图。',{san:3}]])},
+ {w:3, c:()=>!!s.comp.foreign, f:()=>ask('Townhall','全球 CEO 来中国开 Townhall，最后有提问环节。',[
+   {t:'用英文提一个尖锐问题', f:()=>{ if(chance(.5)) L('CEO 说 “Great question”，会后 VP 加了你的 Teams。', fx({net:8}),'good'); else L('现场安静了五秒。你的老板脸色不太好。', fx({boss:-6})); }},
+   {t:'安静吃 pizza', f:()=>L('Pizza 是凉的。')}])},
+ {w:2, c:()=>!!s.comp.foreign, f:()=>L('你休了 15 天年假，回来发现系统一切正常。你有点失落。', fx({san:6,hp:3}))},
+ {w:3, c:()=>!!(s.comp.unicorn||s.comp.spinoff), cd:6, f:()=>ask('发布前 72 小时','产品发布会定在周五，核心指标还差一截。',[
+   {t:'三天不睡冲刺', f:()=>{ if(chance(.55)) L('指标追上来了，发布会刷屏。', fx({hp:-8,qmod:10}),'good'); else L('还是差一点。发布会照开，评论区一片质疑。', fx({hp:-8,san:-6}),'warn'); }},
+   {t:'建议推迟发布', f:()=>L('CEO 说：“窗口期不等人。”', fx({boss:-6}))}])},
+
+ /* ---------- 岗位专属 ---------- */
+ {w:3, c:()=>!!R_('algo'), f:()=>ask('GPU 不够了','训练任务排队三天，隔壁组占着 512 张卡跑实验。',[
+   {t:'找 infra 的朋友插个队', f:()=>{ if(s.net>=50) L('朋友帮你挪了 64 张卡。', fx({qmod:4,net:-2})); else L('朋友说：“我也没办法。”', fx({san:-3})); }},
+   {t:'改小模型先跑起来', f:()=>L('效果差了一截，但至少有结果了。', fx({abi:2,qmod:1}))}])},
+ {w:2, c:()=>!!R_('algo'), cd:10, f:()=>L('读研时的同门发了一篇顶会 oral，你还在调推荐模型的特征。', fx({san:-3}))},
+ {w:3, c:()=>!!R_('qa'), f:()=>ask('发版当天','发版前一小时，你发现了一个偶现的 bug。研发说“概率很低，先上”。',[
+   {t:'卡住发布', f:()=>L('发版延期两天。你被夸“守住了质量底线”，但研发组不太高兴。', fx({net:-3,qmod:3}))},
+   {t:'放行', f:()=>{ if(chance(.4)){ s.blame++; s.blameAt = s.turn; L('上线后偶现变成了必现。测试报告上签的是你的名字。', fx({boss:-6}),'bad'); } else L('没出事。你松了口气。'); }}])},
+ {w:2.5, c:()=>!!R_('fe'), cd:6, f:()=>L(pick(['设计师说按钮“差了 1px 的呼吸感”。','老板用手机自带浏览器打开页面，布局全乱了。','你写了三个月的页面，产品说下个版本要“全面改版”。']), fx({san:-3}))},
+ {w:3, c:()=>!!R_('pm'), f:()=>ask('AB 实验','你主推的功能做了 AB 实验，核心指标涨了 0.3%，但不显著。',[
+   {t:'换个口径再看看', f:()=>{ if(chance(.5)) L('换了口径就显著了。汇报很顺利。', fx({qmod:5})); else L('数据组同学在群里指出了你的统计问题。', fx({qmod:-4,net:-3}),'warn'); }},
+   {t:'如实汇报，继续迭代', f:()=>L('老板说：“实事求是是对的。”', fx({boss:3,abi:2}))}])},
+ {w:3, c:()=>!!R_('ops'), f:()=>ask('舆情','凌晨一点，一条用户投诉上了热搜。',[
+   {t:'连夜写回应', f:()=>L('回应稿发出后舆论反转。公关总监记住了你的名字。', fx({hp:-4,qmod:6,net:3}),'good')},
+   {t:'等公关部处理', f:()=>L('第二天老板问：“昨晚谁在值班？”', fx({boss:-5}))}])},
+ {w:3, c:()=>!!R_('des'), f:()=>ask('再大气一点','老板看了你的第七版设计稿：“还是不够大气，你再感受一下。”',[
+   {t:'出第八版', f:()=>L('老板选了第一版。', fx({san:-4}))},
+   {t:'把第一版改个颜色交上去', f:()=>L('老板说：“对，就是这个感觉。”', fx({san:3}))}])},
+ {w:3, c:()=>!!R_('hr'), cd:6, f:()=>L(pick(['本季度招聘 KPI 是 40 个 offer，冻结 HC 的邮件同一天到达。','你给新人讲了 12 遍“我们的文化”，第 13 遍时自己也有点不信了。','业务老板要求两周内招到一个“能力对标高 P、薪资对标初级”的人。']), fx({san:-3}))},
+ {w:2.5, c:()=>s.role.n==='后端开发', cd:6, f:()=>L(pick(['凌晨两点的数据库迁移，你盯着进度条看了三个小时。','你写的服务调用量翻了十倍，没挂。你在工位上偷偷握了下拳。','一个十年前的接口被下线，连锁报错了 23 个服务。']), fx({hp:-2,abi:1}))},
+
+ /* ---------- 管理者 ---------- */
+ {w:3, c:()=>!s.out && s.lvIdx >= Math.ceil(s.comp.exec*.45), f:()=>ask('给下属打绩效','HR 要求你组里必须有一个最低档。',[
+   {t:'给表现最差的那个', f:()=>L('他在 1:1 里没说话，下个月提了离职。', fx({san:-4}))},
+   {t:'去和总监吵，争取不打', f:()=>{ if(chance(.4)) L('总监让步了。下属们不知道你为他们做了什么。', fx({boss:-5,san:3})); else L('没吵赢，还被说“管理不够果断”。', fx({boss:-8,san:-4}),'warn'); }},
+   {t:'给自己打低一点，保下属', f:()=>L('下属们后来知道了。团队凝聚力前所未有地好。', fx({net:8,qmod:-6}))}])},
+ {w:2.5, c:()=>!s.out && s.lvIdx >= Math.ceil(s.comp.exec*.45), cd:10, f:()=>ask('核心下属要走','你最得力的下属拿着竞对的 offer 来找你。',[
+   {t:'找总监申请加薪挽留', f:()=>{ if(s.boss>=50) L('留下来了。他说欠你一个人情。', fx({net:5,boss:-3})); else L('总监说预算不够。他走了。', fx({qmod:-5,san:-3})); }},
+   {t:'真诚祝福', f:()=>L('他走前请全组吃了顿火锅。', fx({net:4,qmod:-3}))}])},
+ {w:2, c:()=>!s.out && s.lvIdx >= Math.ceil(s.comp.exec*.45), cd:10, f:()=>L('部门预算被砍 30%，你需要在周五前交一份“组织优化方案”。', fx({san:-5}))},
+ {w:2, c:()=>!s.out && s.lvIdx >= 2, cd:12, f:()=>L(`你被拉去当晋升答辩评委。看着台上紧张的年轻人，${s.st.promos>0?'你想起了自己当年答辩时的样子':'你想到自己其实还没答辩过'}。`, fx({net:3,san:1}))},
+
+ /* ---------- 职场日常 ---------- */
+ {w:2, c:()=>s.turn<8, once:1, f:()=>L('组里一位老员工主动带你熟悉代码库和潜规则，还告诉你哪个总监不能惹。', fx({net:4,abi:2}),'good')},
+ {w:2, c:()=>s.compQ>=8, cd:12, f:()=>L('你发现新来的应届生工资比你高。', fx({san:-5}),'warn')},
+ {w:1.5, c:()=>s.compQ>=12, cd:12, f:()=>{ s.boss = rnd(30,70); L('三年前离职的老同事回流了，现在是你的直属老板。', s.boss>=55 ? '他对你还不错' : '你们之前有过节'); }},
+ {w:2, cd:10, f:()=>L(pick(['公司搬进了新园区，你的通勤多了 40 分钟。','食堂换了供应商，你开始带饭。','工区改成了开放式工位，再也没地方摸鱼。']), fx({san:-2}))},
+ {w:2, f:()=>ask('出差','客户在外地，需要有人去驻场一个月。',[
+   {t:'去', f:()=>L('你在酒店里写了一个月方案，客户很满意。', fx({qmod:5,net:3,san:-2}))},
+   {t:'让别人去', f:()=>L('同事回来后带了一堆特产，还被老板夸了。')}])},
+ {w:()=>s.net>=50?2:0, cd:10, f:()=>L('你内推的朋友入职了，内推奖金到账。', fx({money:1,net:2}))},
+ {w:2, c:()=>s.age>=26, cd:16, f:()=>{ const good = s.lvIdx >= 2 || s.money >= 200; L(good ? '大学同学聚会，大家听说你在大厂，纷纷来加微信。' : '大学同学聚会，当年成绩最差的那个同学开了三家公司，买了单。', fx({san:good?4:-4})); }},
+
+ /* ---------- 个人生活 ---------- */
+ {w:2, once:1, f:()=>ask('健身卡','公司楼下健身房搞活动，年卡五折。',[
+   {t:'办！', f:()=>{ s.money = r1(s.money-.3); if(chance(.4)) L('你坚持下来了，体检报告第一次全绿。', fx({hp:10,san:4}),'good'); else L('你一共去了三次。'); }},
+   {t:'不办', f:()=>{}}])},
+ {w:2, c:()=>s.age>=25, once:1, f:()=>ask('副业','朋友拉你一起做个小程序副业，晚上和周末干。',[
+   {t:'干', f:()=>{ L('你的周末没了。', fx({san:-3,hp:-2})); s.timers.push({at:s.turn+4,f:()=>{ if(s.over) return; const r = R(); if(r<.35){ const v = rnd(5,30); L(`副业赚钱了，一年分到 ${v} 万。`, fx({money:v,san:5}),'good'); } else if(r<.55) L('副业被公司发现了，HR 找你谈了“利益冲突”。', fx({boss:-10,san:-4}),'warn'); else L('副业没做起来，你们解散了群。', fx({san:-2})); }}); }},
+   {t:'算了', f:()=>{}}])},
+ {w:()=>s.san<35?4:0, cd:8, f:()=>ask('周日晚上','你发现自己每到周日晚上就开始心慌，睡不着。',[
+   {t:'预约心理咨询', f:()=>L('咨询师听你说了五十分钟。你第一次说出“我好累”。', fx({san:10,money:-.5}),'good')},
+   {t:'刷手机到三点', f:()=>L('周一早上你在地铁上睡着了，坐过了站。', fx({hp:-3,san:-2}))}])},
+ {w:()=>s.age>=29?2:0, cd:10, f:()=>L(pick(['颈椎开始疼了。你买了一个三百块的人体工学枕。','你发现自己爬三层楼梯会喘。','眼科医生说你的干眼症“很典型”。']), fx({hp:-3}))},
+ {w:()=>s.pets.length<2?1.5:0, once:1, f:()=>ask('一只猫','小区楼下有只橘猫跟了你三天。',[
+   {t:'带回家', f:()=>{ const n = adoptPet('猫'); L(`你把它抱回了家，取名「${n}」。`, fx({san:8,money:-.5}),'good'); }},
+   {t:'喂点吃的就走', f:()=>L('第四天它不见了。你有点难过。', fx({san:-1}))}])},
+ {w:()=>(!s.flags.house && s.age>=24)?1.5:0, cd:12, f:()=>L('房东要卖房，给了你一个月搬家。', fx({san:-4,money:-1}))},
+ {w:()=>(s.age>=30 && !s.fam.money)?1.5:0, cd:12, f:()=>L('爸妈打电话：“回来吧，考个编制，离家近。”', fx({san:-2}))},
+
+ /* ---------- 投资与骗局 ---------- */
+ {w:()=>s.money>=20?1.5:0, cd:12, f:()=>{ const v = r1(Math.min(s.money*.3, 60)); ask('稳赚的投资群','你被拉进一个“投资交流群”。群里的“老师”每天晒收益截图，说有一只票“马上要拉升”，名额有限。',[
+   {t:`跟着买 ${v} 万`, f:()=>{ if(chance(.85)){ s.st.scam = (s.st.scam||0)+1; L('你转了钱。三天后群解散了，“老师”的头像变成了灰色。', fx({money:-v,san:-10}),'bad'); } else L('居然真的涨了一点。你赶紧卖掉，退了群。', fx({money:r1(v*.1)})); }},
+   {t:'退群并举报', f:()=>L('你退了群。第二天又被拉进了另一个。')}]); }},
+ {w:()=>s.money>=30?1.2:0, cd:16, f:()=>{ const v = r1(Math.min(s.money*.25, 80)); ask('朋友的理财产品','老同学说他在做一个理财产品，年化 18%，“保本，我自己也投了”。',[
+   {t:`投 ${v} 万`, f:()=>{ s.money = r1(s.money-v); L('你签了一份看不太懂的合同。'); s.timers.push({at:s.turn+3,f:()=>{ if(s.over) return; if(chance(.65)){ s.st.scam = (s.st.scam||0)+1; L('平台爆雷了。老同学的微信再也没回过。你加入了一个维权群。', fx({san:-10}),'bad'); } else { const g = r1(v*1.25); L(`产品到期，本息到账 ${g} 万。你后背有点发凉。`, fx({money:g})); } }}); }},
+   {t:'婉拒', f:()=>L('他说“理解理解”，后来朋友圈屏蔽了你。')}]); }},
+ {w:()=>s.money>=20?1:0, cd:16, f:()=>{ const v = r1(Math.min(s.money*.2, 50)); ask('内部原始股','一位同事神秘兮兮地说，他认识一家公司的创始人，可以拿到“上市前的原始股”。',[
+   {t:`买 ${v} 万`, f:()=>{ s.money = r1(s.money-v); s.timers.push({at:s.turn+6,f:()=>{ if(s.over) return; if(chance(.3)){ const g = r1(v*rf(2,4)); L(`那家公司真的上市了！你的原始股变成了 ${g} 万。`, fx({money:g,san:8}),'good'); } else { s.st.scam = (s.st.scam||0)+1; L('那家公司注销了。同事说：“我也亏了。”', fx({san:-6}),'bad'); } }}); L('你转了钱，拿到一张盖着红章的“股权证明”。'); }},
+   {t:'不碰', f:()=>{}}]); }},
+ {w:()=>(s.age<=32 && !s.flags.married)?.8:0, once:1, f:()=>ask('网上认识的人','你在交友软件上认识了一个很聊得来的人。聊了一个月后，对方说自己在一个“海外理财平台”赚了不少，可以带你。',[
+   {t:'试试看', f:()=>{ const v = r1(Math.min(s.money*.5, 100)); s.st.scam = (s.st.scam||0)+1; L(`你一开始小赚了几笔，于是追加到了 ${v} 万。然后提现通道关闭了，对方也消失了。这叫“杀猪盘”。`, fx({money:-v,san:-15}),'bad'); }},
+   {t:'聊天归聊天，钱免谈', f:()=>L('对方第二天就把你拉黑了。你这才反应过来。', fx({san:2}))}])},
+ {w:()=>s.inv.pe>0?1.5:0, cd:16, f:()=>{ if(chance(.4)){ const v = s.inv.pe; s.inv.pe = 0; s.st.scam = (s.st.scam||0)+1; L(`你买的那只私募产品暴雷了，管理人失联，${v} 万血本无归。`, fx({san:-10}),'bad'); } else L('一家知名私募暴雷的新闻刷屏了。你连夜查了查自己买的产品，还好没事。', fx({san:-3})); }},
+ {w:()=>invTotal()>0?1.5:0, cd:8, f:()=>L(pick(['茶水间里所有人都在聊股票，有人说“这波不上车就晚了”。','同事给你看了他的持仓截图，今年翻了一倍。','你在工位上偷偷看盘，被老板看到了。']), fx({san:-1}))},
+
+ /* ---------- 行业潮汐（影响业务演化） ---------- */
+ {w:.8, cd:16, f:()=>{ let hit = 0; s.biz.forEach(b => { if(/AI|大模型|算力|多模态|视频生成/.test(b.n)){ b.tr = Math.min(1.5, b.tr+.5); hit++; } }); L('行业风向：Agent 热潮席卷各家大厂，“没有 AI 的业务没有未来”。', hit ? '公司里 AI 相关业务的上升势头更强了' : '', 'head'); }},
+ {w:()=>s.wave?1.5:.4, cd:16, f:()=>{ s.wave = 0; L('行业回暖：几家大厂同时宣布扩招，猎头又开始打电话了。', '裁员风险下降', 'head'); }},
+];
+
+let EVENTS = null;
+function allEvents(){ if(!EVENTS){ EVENTS = EVENTS_BASE.concat(FRIEND_EVENTS); EVENTS.forEach((e,i) => { e.id = e.id || 'e'+i; }); } return EVENTS; }
+function randomEvents(){
+  const wf = e => typeof e.w==='function' ? e.w() : e.w;
+  const ok = e => {
+    const last = s.cd[e.id];
+    if(last != null && (e.once || s.turn - last < (e.cd||8))) return false;
+    return (!e.c || e.c()) && wf(e) > 0;
+  };
+  const fire = e => { s.cd[e.id] = s.turn; e.f(); };
+  let pool = allEvents().filter(ok);
+  if(chance(.9) && pool.length){ const e = wpick(pool,wf); fire(e); pool = pool.filter(x=>x!==e); }
+  if(chance(.35) && pool.length && !s.unemployed && !s.over){ fire(wpick(pool,wf)); }
+}
+
+/* ============ 主动行动 ============ */
+const ACTIONS = [
+  /* 工作 */
+  {k:'w', n:'抢项目', f:()=>L(pick(['你主动认领了一个没人想接的难活，熬了三个星期把它啃了下来。','你在周会上主动请缨，接下了老板最头疼的需求。','你把一个拖了半年的老问题顺手解决了，老板在群里点名表扬。']), fx({qmod:9,hp:-4,san:-2,boss:2}))},
+  {k:'w', n:'充电学习', f:()=>{ const v = rnd(4,6); L(pick(['你周末啃完了一本技术书，周一就用在了项目上。','你上完了一门大模型课程，给组里做了一次分享。','你复盘了过去一年的项目，写了一篇方法论文档。']), fx({abi:v,qmod:3,san:-1,money:-.5}) + ' · 能力会持续提升之后每个季度的表现'); }},
+  {k:'w', n:'向上管理', f:()=>{ let v = rnd(7,12); if(has('向上管理大师')) v = Math.round(v*1.6); if(has('技术洁癖')) v = Math.round(v*.5); L(pick(['你主动约老板 1:1，汇报了进展和下一步计划。','你帮老板改了一份给 VP 的 PPT，他很满意。','你提前把风险同步给了老板，他在上级面前没被问住。']), fx({boss:v,qmod:2,san:-2})); }},
+  {k:'w', n:'活水转岗', c:()=>!s.out, f:()=>transferMenu()},
+  {k:'w', n:'看机会', f:()=>{
+    const p = .35 + (s.abi-50)*.01 + lastPv()*.15 - Math.max(0,s.age-33)*.04 - (s.wave?.15:0);
+    if(chance(clamp(p,.05,.9))){ const of = genOffer(1); offerAsk(of, '面试通过', `你偷偷面了几家，${of.c.n} 发来了 offer。`); }
+    else L(pick(['面了两轮，挂在了交叉面。','对方说你“很优秀，但不太匹配”。','HC 冻结了。']), fx({san:-3}));
+  }},
+  {k:'w', n:'裸辞', f:()=>ask('确定裸辞？','你把辞职信写好了，光标停在“发送”上。',[{t:'发送', f:()=>{ L('你发出了辞职信。走出大楼时阳光很好。'); leaveMenu('quit'); }},{t:'再想想', f:()=>{}}])},
+  /* 生活 */
+  {k:'l', n:'休假', f:()=>vacationMenu()},
+  {k:'l', n:'运动', f:()=>sportMenu()},
+  {k:'l', n:'约朋友', f:()=>L(pick(['你约了几个老同学吃火锅，聊到十二点。','你去参加了一个行业沙龙，加了二十个微信。','你和前同事打了一下午羽毛球。']), fx({net:4,san:4,money:-.3}))},
+  {k:'l', n:'养宠物', c:()=>s.pets.length<2, f:()=>ask('养宠物','你想养点什么？',[
+    {t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>{ const n = adoptPet('猫'); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); }},
+    {t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>{ const n = adoptPet('狗'); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); }},
+    {t:'再想想', f:()=>{}}])},
+  {k:'l', n:'投资理财', f:()=>investMenu()},
+];
+function transferMenu(){
+  const opts = s.biz.map((b,j)=>({b,j})).filter(o=>!o.b.dead && o.j!==s.bizIdx).map(o=>({
+    t:`「${o.b.n}」`, sub:`${STN[o.b.st]}业务${o.b.st===2?' · 竞争激烈':''}`,
+    f:()=>{
+      const p = .55 - (o.b.st===2?.22:0) + (lastPv()-.5)*.4 + (s.boss<40?.1:0);
+      if(chance(clamp(p,.1,.9))){ moveBiz(o.j); L(`活水成功，你调到了「${o.b.n}」。`, '', 'good'); }
+      else L(`「${o.b.n}」的面试官说：“我们再看看。”`, fx({san:-2}));
+    }}));
+  opts.push({t:'算了', f:()=>{}});
+  ask('内部活水', '想去哪个业务？', opts);
+}
+function doAction(i){
+  const a = ACTIONS[i]; const key = a.k==='w' ? 'actedW' : 'actedL';
+  if(s[key] || s.queue.length || s.over || s.unemployed) return;
+  if(a.c && !a.c()) return;
+  s[key] = true; a.f(); render();
+}
+
+/* ============ 休假与足迹 ============ */
+const PLACES = [
+  {n:'三亚',c:1.5,t:'你在三亚的海边躺了五天，工作群 99+，你一条没看。'},
+  {n:'大理',c:1,t:'你在大理洱海边骑了一圈车，认真考虑了一下“以后在这开个客栈”。',x:{san:3}},
+  {n:'成都',c:1,t:'你在成都吃了五天火锅，看了一下午熊猫，被慢节奏治愈了。'},
+  {n:'西安',c:1,t:'你在西安城墙上骑车，晚上吃了三顿泡馍。兵马俑比想象中更壮观。'},
+  {n:'哈尔滨',c:1.2,t:'你在哈尔滨看了冰雪大世界，冻得说不出话，但很快乐。',q1:'正赶上冰雪节，'},
+  {n:'拉萨',c:2,t:'你在拉萨看到了布达拉宫，也体验了高原反应。站在那里，KPI 显得很遥远。',x:{hp:-4,san:5}},
+  {n:'新疆伊犁',c:2.5,t:'你在伊犁的草原上自驾了一周，手机大部分时间没有信号。',x:{san:4}},
+  {n:'敦煌',c:1.8,t:'你在敦煌看了莫高窟和鸣沙山的日落。一千年前的人也在画画、也在工作。',x:{abi:1}},
+  {n:'厦门',c:1,t:'你在鼓浪屿的小巷里迷路了一下午，喝了三杯不同的咖啡。'},
+  {n:'桂林',c:1,t:'你坐竹筏漂过漓江，终于明白了二十元人民币背面画的是哪里。'},
+  {n:'重庆',c:.8,t:'你在重庆坐了轻轨穿楼，导航彻底失效，你却玩得很开心。'},
+  {n:'张家界',c:1.2,t:'你在张家界爬了一整天山，腿酸了三天，但睡得特别好。',x:{hp:3}},
+  {n:'景德镇',c:.8,t:'你在景德镇学着拉坯，做了一个歪歪扭扭的杯子，比任何周报都有成就感。',x:{san:3}},
+  {n:'东京',c:3,abroad:1,t:'你在东京逛了五天，买了一箱零食和三本漫画。'},
+  {n:'京都',c:3,abroad:1,t:'你在京都的寺庙里坐了一下午，一句话也没说。'},
+  {n:'清迈',c:2,abroad:1,t:'你在清迈上了一节泰式厨艺课，还给大象洗了澡。'},
+  {n:'新加坡',c:3,abroad:1,t:'你在新加坡吃了海南鸡饭和辣椒蟹，顺便见了在这里工作的老同学。',x:{net:3}},
+  {n:'巴黎',c:6,abroad:1,t:'你在巴黎的塞纳河边坐了一个傍晚。卢浮宫人太多，你只看到了《蒙娜丽莎》的后脑勺……不，是前面的人的后脑勺。'},
+  {n:'意大利',c:6,abroad:1,t:'你从罗马走到佛罗伦萨，每天吃两份意面、三个冰淇淋。'},
+  {n:'冰岛',c:8,abroad:1,t:'你在冰岛看到了极光。那一刻你忘了自己的职级。',x:{san:6}},
+  {n:'新西兰',c:7,abroad:1,t:'你在新西兰自驾环岛，路上遇到的羊比人多。',x:{san:4}},
+  {n:'土耳其',c:5,abroad:1,t:'你在卡帕多奇亚坐了热气球，日出的时候天上飘满了气球。'},
+  {n:'埃及',c:5,abroad:1,t:'你站在金字塔前，想起这也是一个“历史悠久的大项目”。'},
+  {n:'挪威',c:8,abroad:1,t:'你坐游轮穿过峡湾，下午三点天就黑了，你却一点也不着急。',x:{san:5}},
+];
+const TRAVEL_ACH = [
+  {k:'t5', n:'旅行爱好者', test:v=>v.length>=5},
+  {k:'t10', n:'行万里路', test:v=>v.length>=10},
+  {k:'cn8', n:'走遍中国', test:v=>v.filter(n=>!PLACES.find(p=>p.n===n).abroad).length>=8},
+  {k:'ab5', n:'环球旅行家', test:v=>v.filter(n=>PLACES.find(p=>p.n===n).abroad).length>=5},
+  {k:'all', n:'地球 Online 全图鉴', test:v=>v.length>=PLACES.length},
+];
+function vacationMenu(){
+  const can = PLACES.filter(p => p.c <= s.money);
+  const fresh = can.filter(p => !s.visited.includes(p.n)), old = can.filter(p => s.visited.includes(p.n));
+  const shuffle = a => a.map(v=>[R(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  const cand = [...shuffle(fresh).slice(0,3), ...shuffle(old)].slice(0,3);
+  const o = cand.map(p => ({
+    t:`${p.abroad?'✈️ ':''}${p.n}`, sub:`花费约 ${p.c} 万${s.visited.includes(p.n)?' · 去过':' · 新足迹'}`,
+    f:()=>goTrip(p),
+  }));
+  o.push({t:'哪也不去，在家躺平', sub:'不花钱，恢复少一点', f:()=>L('你请了一周假，睡到自然醒，点外卖，看完了一整部剧。', fx({hp:7,san:8,qmod:-4}))});
+  ask('去哪儿休假？', s.visited.length ? `你已经去过 ${s.visited.length} 个地方了。这次想去哪儿？` : '难得请到假，想去哪儿放松一下？', o);
+}
+function goTrip(p){
+  const pre = (p.q1 && s.q===1) ? p.q1 : '';
+  const eff = Object.assign({hp:10, san:12+(p.abroad?3:0), qmod:-5, money:-p.c}, {});
+  for(const k in (p.x||{})) eff[k] = (eff[k]||0) + p.x[k];
+  if(p.q1 && s.q===1) eff.san += 4;
+  L(pre + p.t, fx(eff));
+  if(p.abroad && chance(.2)) L('落地第一天，老板打来电话：“方便开个短会吗？”', fx({san:-4}));
+  if(!s.visited.includes(p.n)){
+    s.visited.push(p.n);
+    L(`点亮新足迹：${p.n}`, '', 'good');
+    s.ach = s.ach || [];
+    for(const a of TRAVEL_ACH) if(!s.ach.includes(a.k) && a.test(s.visited)){ s.ach.push(a.k); log('', `解锁成就「${a.n}」`, 'head'); }
+  }
+}
+
+/* ============ 同期 ============ */
+const SURN = ['王','李','张','刘','陈','杨','赵','黄','周','吴','徐','孙','马','朱','胡','郭','何','林','罗','高','郑','梁','谢','宋'];
+const GIVN = ['子涵','一帆','雨桐','浩然','思远','佳怡','宇航','欣然','俊杰','梓萱','博文','诗雨','天佑','晓彤','嘉豪','若溪','明轩','可欣','皓宇','书瑶','启明','安琪'];
+const STYLES = [
+  {n:'卷王',p:.12,lay:.8,hop:1,quit:.7},{n:'佛系',p:0,lay:1,hop:.7,quit:1.2},{n:'摸鱼高手',p:-.12,lay:1.6,hop:.6,quit:1},
+  {n:'社牛',p:.06,lay:.9,hop:1.5,quit:1},{n:'技术大牛',p:.1,lay:.7,hop:1.3,quit:.8},{n:'理想主义者',p:.02,lay:1,hop:1,quit:2},
+];
+const CITIES = ['成都','杭州','苏州','长沙','西安','武汉','厦门','昆明','合肥','青岛'];
+const EXITS = [
+  {w:5, t:m=>`考公上岸，在${pick(CITIES)}的一个区政府上班`, maxAge:35},
+  {w:4, t:m=>`回了老家${pick(CITIES)}，进了一家国企`},
+  {w:3, t:m=>`在大理开了一家民宿`},
+  {w:3, t:m=>`做了职场博主，粉丝 ${rnd(2,80)} 万`},
+  {w:3, t:m=>`创业做 AI 应用，拿到了天使轮`, startup:1},
+  {w:2, t:m=>`去${pick(['新加坡','东京','伦敦','墨尔本','柏林'])}读书了`, maxAge:40},
+  {w:2, t:m=>`全职在家带娃`},
+  {w:2, t:m=>`转行当了高中信息技术老师`, maxAge:45},
+  {w:1, t:m=>`开起了网约车，说“比上班自由”`},
+  {w:1, t:m=>`去了寺庙做义工，朋友圈只发日落`},
+];
+function makeCohort(){
+  const used = new Set(), list = [];
+  for(let i=0;i<12;i++){
+    let name; do{ name = pick(SURN)+pick(GIVN); }while(used.has(name)); used.add(name);
+    const st = pick(STYLES);
+    list.push({name, style:st, role:wpick(ROLES).n, abi:rnd(45,80), age:s.age+rnd(-2,2), comp:s.comp, lv:Math.max(0,s.lvIdx+rnd(-1,0)), out:null, top:false, his:[], sp:0});
+  }
+  return list;
+}
+function mateNow(m){
+  if(m.out) return m.out;
+  return `${m.comp.n} · ${m.comp.lv[m.lv]}${m.top?'（高管）':''}`;
+}
+function cohortTick(){
+  const news = [];
+  const add = (m, txt, big) => { m.his.push(`${s.year}：${txt}`); news.push({m, txt, big}); };
+  for(const m of s.cohort.concat(s.others||[])){
+    if(m.out) continue;
+    const age = m.age + Math.floor(s.turn/4); m.sp++;
+    const st = m.style;
+    m.abi = clamp(m.abi + rf(0,.8) + (st.n==='卷王'?.3:0));
+    // 晋升（年底）
+    if(s.q===4 && m.sp>=4 && !m.top && chance(clamp((.26 + (m.abi-55)*.008 + st.p - Math.pow(m.lv/m.comp.exec,1.3)*.45) * (m.lv===m.comp.exec-1?.35:1), .02, .8))){
+      m.lv++; m.sp = 0;
+      if(m.lv >= m.comp.exec){ m.top = true; add(m, `升到了 ${m.comp.lv[m.lv]}，进了高管层`, 3); }
+      else add(m, `晋升到了 ${m.comp.lv[m.lv]}`, 1);
+      continue;
+    }
+    // 裁员
+    let lp = .011 * st.lay * (age>=35?2:1) * (age>=40?1.5:1) * (s.wave?2.5:1);
+    if(chance(lp)){
+      if(age < 40 && chance(.6)){ const c = wpick(C.filter(x=>x.id!==m.comp.id)); m.lv = Math.max(0, Math.min(c.exec-1, Math.round(m.lv/m.comp.exec*c.exec))); m.comp = c; m.sp = 0; add(m, `被裁了，后来去了${c.n}`, 2); }
+      else { const e = wpick(EXITS.filter(x => !x.maxAge || age <= x.maxAge)); m.out = e.t(m); add(m, `被裁后，${m.out}`, 3); }
+      continue;
+    }
+    // 跳槽
+    if(chance(.022 * st.hop)){
+      const c = wpick(C.filter(x=>x.id!==m.comp.id));
+      m.lv = Math.max(0, Math.min(c.exec-2, Math.round(m.lv/m.comp.exec*c.exec)+(chance(.4)?1:0))); m.comp = c; m.sp = 0;
+      add(m, `跳槽去了${c.n}，职级 ${c.lv[m.lv]}`, 1);
+      continue;
+    }
+    // 主动离开
+    let qp = (.004 + (age>=33?.008:0)) * st.quit;
+    if(m.top || m.lv >= m.comp.exec-1){ if(chance(.012)){ m.out = '财务自由，提前退休，在环游世界'; add(m, m.out, 3); continue; } }
+    if(chance(qp)){ const e = wpick(EXITS.filter(x => !x.maxAge || age <= x.maxAge)); m.out = e.t(m); add(m, `离开了大厂，${m.out}`, 3); continue; }
+  }
+  const fr = new Set((s.friends||[]).map(f=>f.p));
+  const pub = news.filter(n => !fr.has(n.m) && s.cohort.includes(n.m));
+  friendTick(news.filter(n => fr.has(n.m)));
+  if(pub.length && chance(.65)){
+    const news2 = pub; news2.sort((a,b)=>b.big-a.big);
+    const n = news2[0];
+    log('', `${n.m.name}${n.txt}。`, 'cohort');
+  }
+}
+function cohortSummary(){
+  const inBig = s.cohort.filter(m=>!m.out).length, top = s.cohort.filter(m=>m.top && !m.out).length;
+  return `和你同一天入职的 ${s.cohort.length} 个人：${inBig} 人还在大厂${top?`（${top} 人进了高管层）`:''}，${s.cohort.length-inBig} 人已经离开。`;
+}
+function cohortHTML(){
+  const fr = new Set((s.friends||[]).map(f=>f.p));
+  return s.cohort.map(m => `<div class="mate"><div class="nm">${m.name}${fr.has(m)?'<span class="chip rare">发小</span>':''}<span class="chip">${m.style.n}</span><span class="chip">${m.role}</span></div>
+    <div class="now ${m.out?'out':m.top?'top':''}">${mateNow(m)}</div>
+    ${m.his.length?`<div class="his">${m.his.slice(-3).join(' → ')}</div>`:'<div class="his">一直在原来的岗位上</div>'}</div>`).join('');
+}
+function showCohort(){
+  $('cohort').innerHTML = `<div class="cp"><h2>同期入职的人</h2><div class="sum">${cohortSummary()}</div>${cohortHTML()}
+    <div class="btns" style="margin-top:14px"><button class="btn" id="closecoh">关闭</button></div></div>`;
+  $('cohort').hidden = false;
+  $('closecoh').onclick = () => { $('cohort').hidden = true; };
+}
+
+/* ============ 职场发小 ============ */
+const FDESC = {
+  '卷王':'每天第一个到工位，显示器边上贴满了便利贴',
+  '佛系':'午休一定要睡满一小时，口头禅是“都行”',
+  '摸鱼高手':'永远知道哪间会议室没人，零食抽屉比你的代码库还丰富',
+  '社牛':'入职第一天就加了全组的微信，还顺手拉了一个“干饭群”',
+  '技术大牛':'话不多，但你卡了一下午的问题，TA 五分钟就看出来了',
+  '理想主义者':'工位上放着一本《人类简史》，说来大厂是为了“改变点什么”',
+};
+const ffName = f => f.p.name;
+const curF = () => (s.friends||[]).filter(f => f.same).sort((a,b)=>b.bond-a.bond)[0];
+const oldF = () => (s.friends||[]).filter(f => !f.same && f.bond >= 25).sort((a,b)=>b.bond-a.bond)[0];
+const fdesc = f => FDESC[f.p.style.n].replace(/TA/g, f.he);
+const sameCo = m => !m.out && !s.unemployed && m.comp.id === s.comp.id;
+function meetFriend(p, kind, first){
+  const f = {p, kind, bond: first?30:20, same:true, he:pick(['他','她'])};
+  s.friends.push(f);
+  log('', first
+    ? `入职第一天，你在工位旁认识了同期的${p.name}。${f.he}是个${p.style.n}，${fdesc(f)}。你们加了微信，约好明天一起吃午饭。`
+    : `新公司的第一周，${p.name}主动带你去吃了食堂最好吃的窗口。${f.he}是个${p.style.n}，${fdesc(f)}。`, 'good');
+  return f;
+}
+function friendTick(news){
+  for(const f of s.friends){
+    const now = sameCo(f.p);
+    if(f.same && !now && !s.unemployed){
+      // 朋友离开了你所在的公司
+      const where = f.p.out ? `离开了大厂，${f.p.out}` : `去了${f.p.comp.n}`;
+      log('', `你的${f.kind}${ffName(f)}${where}。最后一天${f.he}把工位上那盆多肉留给了你，说：“常联系，别太卷。”`, 'warn', fx({san: f.bond>=50 ? -6 : -3}));
+    } else if(!f.same && now){
+      log('', `你在电梯里撞见了${ffName(f)}——${f.he}也到了${s.comp.n}。你们愣了两秒，然后同时笑了出来。`, 'good', fx({san:6}));
+      f.bond += 10;
+    }
+    f.same = now;
+  }
+}
+function friendOnLeave(){
+  // 你离开公司时
+  for(const f of s.friends) if(f.same){ log('', `你跟${ffName(f)}说你要走了。${f.he}沉默了一会儿：“苟富贵，勿相忘。”`, '', ''); f.same = false; }
+}
+function friendOnJoin(){
+  for(const f of s.friends){ if(sameCo(f.p) && !f.same){ f.same = true; log('', `入职第一天，你在新公司的电梯里撞见了${ffName(f)}。“这么巧？！”`, 'good', fx({san:6})); f.bond += 10; } }
+  if(!curF() && chance(.6)){
+    const st = pick(STYLES);
+    const p = {name:pick(SURN)+pick(GIVN), style:st, role:wpick(ROLES).n, abi:rnd(50,80), age:s.age-Math.floor(s.turn/4)+rnd(-3,3), comp:s.comp, lv:Math.max(0,Math.min(s.comp.exec-1,s.lvIdx+rnd(-1,1))), out:null, top:false, his:[], sp:0};
+    s.others = s.others || []; s.others.push(p);
+    meetFriend(p, '饭搭子', false);
+  }
+}
+const FRIEND_EVENTS = [
+ {w:()=>curF()?3:0, cd:5, f:()=>{ const f = curF(); f.bond += 5;
+   L(s.boss<45 ? `你和${ffName(f)}拉了个小群，专门吐槽老板。今天的素材是：周会上老板把 KPI 说成了“KPA”。` : pick([`你和${ffName(f)}拉了个小群吐槽老板的 PPT，一页上用了七种字体。`,`你和${ffName(f)}在小群里给老板的口头禅做了排行榜，“对齐”以 47 次高居榜首。`]), fx({san:6})); }},
+ {w:()=>curF()?3:0, cd:4, f:()=>{ const f = curF(); f.bond += 3; L(pick([`你和${ffName(f)}每天中午一起吃饭，今天聊的是“要不要一起辞职开个面馆”。`,`下午三点，${ffName(f)}在群里发了句“走，下楼买咖啡”。你们在楼下晒了二十分钟太阳。`,`${ffName(f)}从老家带了一箱橘子，给你留了最大的那几个。`]), fx({san:3})); }},
+ {w:()=>curF()?2.5:0, cd:6, f:()=>{ const f = curF(); ask('下班撸串', `${ffName(f)}：“今晚别加班了，楼下烧烤店，我请。”`, [
+   {t:'走！', f:()=>{ f.bond += 8; L(`你们喝到十一点，${f.he}说起了刚来北京时住的地下室，你说起了第一次被骂哭。`, fx({san:7,hp:-1,money:-.2})); }},
+   {t:'今天真得加班', f:()=>{ f.bond -= 3; L(`${f.he}说：“行，那你别太晚。”然后给你带了一串烤馒头片。`, fx({qmod:2})); }}]); }},
+ {w:()=>(curF() && s.strat==='moyu')?2.5:0, cd:6, f:()=>{ const f = curF(); f.bond += 3; L(`老板朝你工位走过来的时候，${ffName(f)}在群里发了个“🍵”——你们约好的暗号。你及时切回了 IDE。`, fx({san:3,boss:2})); }},
+ {w:()=>(curF() && !s.out && s.sinceProm>=3 && s.lvIdx<s.comp.exec)?2:0, cd:8, f:()=>{ const f = curF(); f.bond += 5; s.flags.promoHelp = true; L(`${ffName(f)}陪你熬了两个晚上，帮你把晋升 PPT 从 40 页删到了 15 页。“评委只看前三页，相信我。”`, '下次晋升答辩通过率提高', 'good'); }},
+ {w:()=>curF()?2:0, cd:10, f:()=>{ const f = curF(); ask(`${ffName(f)}不太好`, `${ffName(f)}这几天很沉默。午饭时${f.he}突然说：“${pick(['我的项目被砍了，半年白干了。','我分手了。','我妈住院了，我请不下来假。','我绩效拿了最低档。'])}”`, [
+   {t:'陪着聊到很晚', f:()=>{ f.bond += 12; L(`你没说太多大道理，只是陪${f.he}坐着。走的时候${f.he}说：“谢了，兄弟。”`, fx({san:-2,net:2})); }},
+   {t:'“会好的，加油”', f:()=>{ f.bond -= 5; L(`${f.he}点点头，没再说什么。`); }}]); }},
+ {w:()=>(curF() && curF().bond>=40)?1.2:0, cd:16, f:()=>{ const f = curF(); L(`你过生日那天，${ffName(f)}偷偷拉着全组给你订了个蛋糕，上面写着“祝你早日财务自由”。`, fx({san:8,net:2}), 'good'); }},
+ {w:()=>(curF() && s.blame>0)?2:0, cd:10, f:()=>{ const f = curF(); f.bond += 5; s.blame = Math.max(0, s.blame-1); L(`复盘会上有人想把锅往你这边推，${ffName(f)}直接把当时的聊天记录甩进了群里。`, `背锅 ${s.blame}/3`, 'good'); }},
+ {w:()=>oldF()?2:0, cd:6, f:()=>{ const f = oldF(); const now = f.p.out ? f.p.out : `在${f.p.comp.n}做到了 ${f.p.comp.lv[f.p.lv]}`;
+   L(`你和老朋友${ffName(f)}约了顿饭。${f.he}现在${now}。你们聊到餐厅打烊，谁也没提工作上的烦心事。`, fx({san:6})); f.bond += 2;
+   if(!f.p.out && f.p.comp.id !== s.comp.id && !s.unemployed && chance(.35)){
+     const c = f.p.comp; const {lv, mult} = offerLevel(c, curPay()*rf(1.1,1.3));
+     const of = {c, lv, mult, biz: c.biz.findIndex(b=>b[1]>=1), pay: Math.round(c.pay[lv]*mult)}; if(of.biz<0) of.biz = 0;
+     offerAsk(of, '老友内推', `饭后${ffName(f)}说：“我们组缺人，要不要过来？我直接推给老板。”`);
+   } }},
+];
+
+// m: 第 N 次练习时的里程碑 [文案, 额外效果, 解锁成就]；g: 日常文案；risk: 受伤概率；season: 可用季度
+const SPORTS = [
+  {k:'run', n:'跑步', c:0, fx:{hp:5,san:4},
+   m:{1:['你下班后在小区跑了 5 公里，第 3 公里差点放弃。'],2:['你加入了公司跑团，周末跟大家跑了 10 公里。',{net:2}],3:['你跑完了人生第一个半程马拉松，2 小时 08 分。冲过终点那一刻，你眼眶有点湿。',{san:8},'半马完赛'],6:['你跑完了全程马拉松。42.195 公里，比任何一个项目都长，但你坚持到了最后。',{san:10,hp:3},'全马完赛']},
+   g:['晨跑时看到了日出，整个人都清醒了。','你的配速又快了 10 秒。','雨中跑了 8 公里，回家洗了个热水澡，睡得特别香。'], risk:.04, hurt:'跑太猛，膝盖有点疼。'},
+  {k:'climb', n:'攀岩', c:.3, fx:{hp:4,san:5},
+   m:{1:['你第一次去岩馆，爬了三条最简单的线就手抖了。'],3:['你完成了第一条 V3，岩友们在下面为你鼓掌。',{san:5,net:2},'岩友'],6:['你和岩友去阳朔爬了真正的岩壁。登顶时，整条漓江都在脚下。',{san:8},'阳朔岩壁']},
+   g:['你卡在一个难点上试了二十次，终于过了。','岩馆里认识的朋友居然在隔壁大厂上班。','你的指力明显变强了，敲键盘都更有劲。'], risk:.1, hurt:'从岩壁上掉下来，脚踝扭了。'},
+  {k:'yoga', n:'瑜伽', c:.2, fx:{hp:3,san:7},
+   m:{1:['你第一次上瑜伽课，手离地板还有 20 厘米。'],3:['你终于能摸到脚尖了。颈椎也没那么疼了。',{hp:3}],4:['老师说你的“下犬式”很标准。你开始每天早上练二十分钟。',{san:4},'瑜伽达人']},
+   g:['最后的冥想环节，你差点睡着。','你在工位上偷偷做了几个拉伸，同事也跟着做了起来。','一节课下来，脑子里的需求列表终于安静了。'], risk:0},
+  {k:'tennis', n:'网球', c:.3, fx:{hp:4,san:4,net:2},
+   m:{1:['你约同事打网球，捡球捡了一下午。'],3:['你在公司网球赛里打进了八强。',{net:4},'网球爱好者']},
+   g:['你和一位总监打了场网球，故意输了一局。',  '你的反手终于能打过网了。','周末的网球局上，你认识了一个做投资的朋友。'], risk:.04, hurt:'网球肘犯了，鼠标都握不住。', bossChance:.3},
+  {k:'badminton', n:'羽毛球', c:.05, fx:{hp:4,san:4,net:1},
+   m:{1:['你和同事订了晚上九点的场，打完一身汗。'],3:['你代表部门参加公司羽毛球赛，拿了第三名。',{net:4},'羽球健将']},
+   g:['你们组每周四的羽毛球局，成了大家最期待的事。','杀球时你喊出了声，旁边场地的人都看了过来。','你和产品经理打了一场双打，配合得比工作时好多了。'], risk:.03, hurt:'起跳落地时崴了脚。'},
+  {k:'swim', n:'游泳', c:.1, fx:{hp:6,san:3},
+   m:{1:['你在泳池里终于学会了换气。'],4:['你一口气游了 1500 米，上岸时腿都软了。',{hp:3},'浪里白条']},
+   g:['泳池里很安静，没有人能给你发消息。','你在水里憋气的时候，突然想通了一个技术方案。'], risk:0},
+  {k:'bike', n:'骑行', c:.2, fx:{hp:5,san:5},
+   m:{1:['你买了一辆公路车，花掉了半个月工资。',{money:-2}],3:['周末你骑了 100 公里环湖，晒成了两截。',{san:4},'百公里骑士']},
+   g:['你开始骑车通勤，堵车再也和你没关系了。','下坡时风吹在脸上，你觉得自己是自由的。'], risk:.05, hurt:'下雨天骑车摔了一跤，手肘擦破了。'},
+  {k:'frisbee', n:'飞盘', c:.1, fx:{hp:3,san:5,net:4},
+   m:{1:['你参加了一个飞盘局，认识了一群其他大厂的人。'],3:['你在飞盘局上听说了三个内推机会，还加了一位猎头。',{net:5},'飞盘社交达人']},
+   g:['飞盘局结束后大家一起去吃了烧烤。','你第一次成功接到了长传，全场欢呼。'], risk:.02, hurt:'抢盘时撞到了人，膝盖青了一块。'},
+  {k:'ski', n:'滑雪', c:1.5, fx:{hp:3,san:8}, season:[1,4],
+   m:{1:['你在雪场摔了二十几次，第二天浑身酸痛。'],3:['你能从中级道一路滑下来了，不再摔跤。',{san:4},'雪道飞人']},
+   g:['在山顶看着雪道，你觉得城市离得很远。','你在缆车上和陌生人聊了一路。'], risk:.12, hurt:'摔得太狠，手腕扭伤了。'},
+  {k:'box', n:'拳击', c:.2, fx:{hp:4,san:8},
+   m:{1:['你把沙袋想象成那个周五晚上改需求的人，打了一个小时。'],3:['教练说你的组合拳“有点东西了”。',{hp:2},'拳击爱好者']},
+   g:['打完一节课，你发现自己不那么想骂人了。','你的出拳速度越来越快，压力越来越小。'], risk:.04, hurt:'没缠好绷带，手指肿了。'},
+  {k:'gym', n:'健身', c:.3, fx:{hp:6,san:3},
+   m:{1:['你请了私教，第二天下不了楼梯。'],4:['你的卧推突破了自己的体重。同事说你衬衫变紧了。',{hp:3},'撸铁人']},
+   g:['你在健身房的镜子里，看到了自己久违的肌肉线条。','健身打卡第 30 天，你的体检指标好看了不少。'], risk:.04, hurt:'深蹲姿势不对，腰闪了。'},
+  {k:'surf', n:'冲浪', c:2, fx:{hp:4,san:8}, season:[2,3],
+   m:{1:['你在海边上了第一节冲浪课，喝了半片海的水。'],3:['你第一次稳稳地站上了浪，那几秒像一辈子那么长。',{san:5},'冲浪玩家']},
+   g:['你在海边晒成了小麦色，回公司被问是不是去出差了。','等浪的时候，你在板子上看了半小时的海。'], risk:.05, hurt:'被冲浪板撞了一下，额头肿了个包。'},
+];
+function sportMenu(){
+  const ok = SPORTS.filter(x => (!x.season || x.season.includes(s.q)) && x.c <= Math.max(0,s.money));
+  const shuffle = a => a.map(v=>[R(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  const done = shuffle(ok.filter(x => s.sport[x.k])), fresh = shuffle(ok.filter(x => !s.sport[x.k]));
+  const cand = [...done.slice(0,2), ...fresh].slice(0,4);
+  const o = cand.map(x => ({ t:x.n, sub:`${s.sport[x.k] ? `练过 ${s.sport[x.k]} 次` : '新爱好'}${x.c ? ` · 约 ${x.c} 万` : ' · 免费'}${x.season ? ' · 季节限定' : ''}`, f:()=>doSport(x) }));
+  o.push({t:'算了，躺着吧', f:()=>{}});
+  ask('运动一下？', '选一项运动。坚持练三次以上，它会变成你的长期爱好。', o);
+}
+function doSport(x){
+  const n = s.sport[x.k] = (s.sport[x.k]||0) + 1;
+  const eff = Object.assign({}, x.fx); if(x.c) eff.money = -x.c;
+  const ms = x.m[n];
+  if(ms){ for(const k in (ms[1]||{})) eff[k] = (eff[k]||0) + ms[1][k]; }
+  let text = ms ? ms[0] : pick(x.g);
+  if(!ms && x.bossChance && text.includes('总监') ) eff.boss = 5;
+  L(text, fx(eff));
+  if(ms && ms[2] && !s.sAch.includes(ms[2])){ s.sAch.push(ms[2]); log('', `解锁成就「${ms[2]}」`, 'head'); }
+  if(n === 3) L(`${x.n}成了你的长期爱好。之后每个季度健康和精神都会慢慢变好。`, '', 'good');
+  if(x.risk && chance(x.risk)) L(x.hurt, fx({hp:-5}), 'warn');
+}
+function hobbyTick(){
+  const hob = SPORTS.filter(x => (s.sport[x.k]||0) >= 3).length;
+  if(hob){ const k = Math.min(hob,2); s.hp = clamp(s.hp + .6*k); s.san = clamp(s.san + .5*k); }
+}
+
+/* ============ 宠物 ============ */
+const PETN = {'猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐'], '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐']};
+function adoptPet(type){
+  const names = PETN[type].filter(n => !s.pets.some(p=>p.name===n));
+  const name = pick(names.length ? names : PETN[type]);
+  s.pets.push({type, name, since:s.turn, next:s.turn+rnd(2,3)});
+  return name;
+}
+const PET_TXT = {
+  '猫':[n=>`${n}把你的键盘当成了床，你只好用手机回消息。`, n=>`${n}半夜三点在家里跑酷，你被吵醒，却笑了。`, n=>`你加班回家，${n}在门口等你，蹭了蹭你的裤腿。`, n=>`${n}学会了开柜门，偷吃了一整袋冻干。`, n=>`视频会议时${n}走过镜头，全组都在说“好可爱”。`, n=>`${n}趴在你肚子上睡着了，你一动也不敢动。`, n=>`${n}胖了一斤，医生让它减肥。你觉得是自己的错。`, n=>`你打开电脑写周报，${n}一屁股坐在了触控板上。周报被删了，你却不生气。`, n=>`${n}对着窗外的鸟“咔咔咔”叫了一下午。`, n=>`你给${n}买了个三百块的猫爬架，它最爱的还是快递纸箱。`, n=>`${n}在你开早会时踩过键盘，给全组发了一串“ggggggg”。`, n=>`下雨天，${n}和你一起趴在窗边发呆。这是你这周最放松的十分钟。`],
+  '狗':[n=>`周末带${n}去公园，它追了一下午飞盘，你也跑出了一身汗。`, n=>`${n}把你的拖鞋咬坏了，然后用无辜的眼神看着你。`, n=>`下班回家，${n}兴奋得原地转了五圈。`, n=>`${n}学会了握手。你录了视频发朋友圈，${s.st.promos>0?'点赞比你晋升那条还多':'成了你朋友圈有史以来点赞最多的一条'}。`, n=>`下雨天遛${n}遛了一身泥，但心情出奇地好。`, n=>`你心情不好的那天晚上，${n}一直趴在你脚边。`, n=>`早上六点半，${n}准时把你舔醒。你第一次在上班前看到了日出。`, n=>`${n}在小区里交到了新朋友，是隔壁楼的一只柯基。`, n=>`你带${n}去宠物店洗澡，它全程用委屈的眼神看着你。`, n=>`周末你带${n}去郊外爬山，它比你先登顶。`, n=>`你出差三天回来，${n}扑上来的那一刻，你差点哭了。`],
+};
+function petTick(){
+  for(const p of s.pets){
+    s.san = clamp(s.san + 1.2);
+    if(p.type==='狗') s.hp = clamp(s.hp + .8);
+    s.money = r1(s.money - .25);
+    if(s.turn >= p.next){
+      p.next = s.turn + rnd(2,3);
+      if(s.juanStreak >= 4 && chance(.45)) log('', `你最近每天很晚才回家，${p.name}已经不去门口接你了。`, 'pet', fx({san:-2}));
+      else if(chance(.12)) log('', `${p.name}生病了，你请了半天假带它去宠物医院。`, 'pet', fx({money:-rnd(1,3),san:-2}));
+      else {
+        const all = PET_TXT[p.type].map((_,i)=>i);
+        p.used = p.used || [];
+        let left = all.filter(i => !p.used.includes(i));
+        if(!left.length){ p.used = []; left = all; }
+        const i = pick(left); p.used.push(i);
+        log('', PET_TXT[p.type][i](p.name), 'pet', fx({san:rnd(3,5)}));
+      }
+    }
+  }
+}
+
+/* ============ 投资 ============ */
+const INV = {
+  bank:  {n:'银行理财', mu:.022, sd:.008, d:'年化约 2%，几乎不会亏'},
+  index: {n:'指数基金', mu:.06,  sd:.17,  d:'跟着大盘走，长期年化约 6%，单年可能 ±20%'},
+  stock: {n:'行业个股', mu:.07,  sd:.38,  d:'可能翻倍，也可能腰斩'},
+  pe:    {n:'私募产品', mu:.10,  sd:.55,  d:'高收益高风险，一年翻倍或腰斩都很正常，还可能暴雷'},
+};
+function normCdf(z){ const t = 1/(1+.2316419*Math.abs(z)); const d = .3989423*Math.exp(-z*z/2); const p = d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0 ? 1-p : p; }
+function gauss(){ let u=0,v=0; while(!u) u=R(); while(!v) v=R(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function invTotal(){ return s ? r1(Object.values(s.inv).reduce((a,b)=>a+b,0)) : 0; }
+function investMenu(){
+  const hold = Object.entries(s.inv).filter(([k,v])=>v>0).map(([k,v])=>`${INV[k].n} ${r1(v)} 万`).join('，') || '暂无';
+  const o = Object.entries(INV).map(([k,x]) => ({t:`买入${x.n}`, sub:x.d, f:()=>amountMenu(k)}));
+  if(invTotal() > 0) o.push({t:'全部赎回', sub:`取回 ${invTotal()} 万现金`, f:()=>{ const v = invTotal(); s.money = r1(s.money+v); for(const k in s.inv) s.inv[k] = 0; L(`你赎回了全部投资，${v} 万回到账上。`); }});
+  o.push({t:'算了', f:()=>{}});
+  ask('投资理财', `现金 ${s.money} 万。持仓：${hold}。收益每年年底结算。`, o);
+}
+function amountMenu(k){
+  const opts = [];
+  [[.2,'现金的 20%'],[.5,'现金的一半'],[.9,'几乎全部']].forEach(([p,lab]) => {
+    const v = r1(s.money*p);
+    if(v >= 1) opts.push({t:`${lab}（${v} 万）`, f:()=>{ s.money = r1(s.money-v); s.inv[k] = r1(s.inv[k]+v); L(`你买入了 ${v} 万${INV[k].n}。`); }});
+  });
+  if(!opts.length){ L('账上没什么钱可以投。'); return; }
+  opts.push({t:'算了', f:()=>{}});
+  ask(`买入${INV[k].n}`, '投多少？', opts);
+}
+function settleInvest(){
+  if(invTotal() <= 0) return;
+  const mkt = rf(-1,1), parts = []; let pnl = 0;
+  for(const k in s.inv){
+    const v = s.inv[k]; if(v <= 0) continue; const x = INV[k];
+    let r = x.mu + x.sd*gauss()*.8 + ((k==='index'||k==='stock') ? mkt*.12 : 0);
+    if(k==='pe' && chance(.07)) r = -rf(.7,.95);
+    r = Math.max(r, -.95);
+    const d = r1(v*r); s.inv[k] = r1(v+d); pnl += d;
+    parts.push(`${x.n} ${r>=0?'+':''}${Math.round(r*100)}%`);
+  }
+  pnl = r1(pnl); s.st.pnl = r1((s.st.pnl||0) + pnl);
+  const mood = mkt>.5 ? '牛市' : mkt<-.5 ? '熊市' : '震荡市';
+  log('', `【投资年报】${s.year} 年，${mood}：${parts.join('，')}`, pnl>=0?'good':'bad', `全年${pnl>=0?'盈利':'亏损'} ${Math.abs(pnl)} 万，持仓市值 ${invTotal()} 万。`);
+  fx({san: pnl>0 ? 2 : pnl < -10 ? -5 : -1});
+}
+
+function choose(i){
+  const ch = s.queue.shift(); if(!ch) return;
+  ch.opts[i].f();
+  if(!s.over && !s.queue.length && s.pendingFinish) finishQuarter();
+  render();
+}
+
+/* ============ 结局 ============ */
+function endText(k){
+  const c = s.comp, lv = lvLabel();
+  const T = {
+    fire:`${s.age} 岁，存款 ${s.money} 万。你在最后一个工作日把工牌还给前台，没有告别邮件。第二天早上你睡到了自然醒，然后发现自己不知道该干什么——但这是个好问题。`,
+    exec:`${s.age} 岁，你成为${c.n}的 ${lv}。你的日程被会议填满，你开始给新人讲“我当年是怎么做的”。某天深夜，你在办公室里突然想起刚入职时那张拍得不好看的工牌照片。`,
+    startup_ok:'你和三个前同事在一个居民楼里开始创业。第三年，公司拿到了 B 轮。你终于理解了当年老板为什么总是焦虑。',
+    civil:`你考上了。第一天上班，科长说“慢慢来，不着急”。你愣了很久——上一次听到这句话，是在${c.n}的面试里，后来再也没听过。`,
+    foreign:'你在外企一直待到了退休。下午五点半，你关上电脑，楼下的面包店还开着。',
+    fossil:`你在${c.n}一直干到了退休。新同事管你叫“老师”，有人私下说你是“活化石”。你见证了 ${s.st.q} 个季度的组织调整。`,
+    home:`你回了老家，${s.money >= 200 ? '全款买了一套房，开始养花养狗' : '在一家本地公司找了份工作，工资是原来的三分之一，但晚上七点就能吃上饭'}。偶尔刷到前同事的朋友圈，你点个赞，然后划走。`,
+    shop: s.flags.shopOk ? '咖啡店开在大学城旁边，生意不错。你给每一杯拿铁拉花，比写代码认真。' : '咖啡店撑了十四个月。关门那天，你给自己做了最后一杯，然后算了算亏掉的钱，正好是你一年的年终奖。',
+    blogger: s.flags.blogOk ? '你那条《我在大厂的最后一天》爆了。现在你有三十万粉丝，靠讲大厂故事赚的钱比上班还多。' : '你发了一百多条视频，最高播放量 2,300。你重新打开了招聘软件。',
+    laid:`${s.age} 岁，你被“毕业”了。最后一天你把工位上的绿萝带回了家。它比你在这里待得还久。`,
+    health:'体检单上的箭头越来越多。某个加班的深夜，你在工位上眼前一黑。医生让你停下来——这次你听了。你办理了长期病休，然后离职。',
+    burnout: s.leaveKind==='quit' ? '你主动按下了暂停键。在大理租的院子里，你第一次发现，原来下午可以这么长。' : '某个周一早上，你坐在工位上，盯着屏幕，怎么也打不开那个文档。你提了离职，去大理住了半年。',
+    blame:'第三口锅砸下来的时候，事故复盘报告上你的名字被加粗了。HR 说这是“严重违反公司规定”。你没有拿到补偿。',
+    startup_bad:'你们的项目烧完了天使轮，没融到下一轮。你背上了一笔债，重新开始投简历。',
+    moyu:'连续十年，你的工作策略都是“摸鱼”，却从来没被裁。你被内网论坛封为“摸鱼之神”，有人说你是公司最后的传说。',
+    bankrupt:'某个周一，你发现工作软件登不上去了。公司账上的钱烧完了。你的期权，成了一张漂亮的 PDF。',
+    angel:`${s.age} 岁，你不再写周报，开始看别人的 BP。你投的第一个项目创始人，是你当年带过的那个应届生。`,
+    spinoff: s.spinEnd==='acq' ? `你们的公司被收购了。你作为早期成员套现约 ${s.spinPay} 万。签完字那天，你在公司楼下坐了很久——从被人看不上的边缘业务，到被人高价买走，你们只用了 ${Math.floor((s.spin?s.spin.q:0)/4)} 年。` : `当年没人想去的业务，分拆独立 ${Math.floor((s.spin?s.spin.q:0)/4)} 年后上市了。你作为早期成员套现约 ${s.spinPay} 万。你终于明白：选业务，比选公司重要。`,
+    abroad:'外派期满，你选择留在了海外。时差让你终于收不到半夜的工作消息了。偶尔你会想念公司楼下那家煎饼。',
+    phd:'你回到学校读博。导师比你小两岁。食堂的饭很便宜，组会比周会短。你第一次觉得，时间是自己的。',
+    soe:'你去了一家国企的科技子公司。工资少了一半，但下午六点的班车准时发车。领导说：“稳字当头。”',
+    ai_replaced:'你花了两个月，把自己的工作流程一条条写成文档，“沉淀给 AI 知识库”。文档验收通过的那周，你收到了优化通知。系统里，你的岗位编号被一个 Agent 接管了。',
+    gig:`${s.age} 岁，投出去的简历都没有回音。你注册了网约车，早上七点出车。导航经过以前的公司园区时，你会下意识看一眼那扇旋转门。`,
+    arbitration:'你没签字，而是去了劳动仲裁。半年后，裁决书下来了：违法解除，支付 2N 赔偿。你把裁决书拍照发到了前同事群里，群里炸了。',
+    lottery:'某个普通的周二，你顺手买的一张彩票中了。第二天你没去上班，也没请假。HR 打来电话，你说：“我锦鲤附体了。”然后挂了。',
+    noncompete:'你遵守了竞业协议，每个月领着补偿金在家待了两年。你学会了做饭、带娃和钓鱼，发现人生意外地圆满。',
+  };
+  return T[k];
+}
+const QUOTES = {
+  good:  ['大厂生存不过一场游戏，放轻松。','你赢了这一局。最好的奖励，是终于可以睡个好觉。','升职加薪很好，也记得给生活留点时间。'],
+  mid:   ['大厂生存不过一场游戏，放轻松。','世界那么大，不止一个工位。','换一种活法，也是一种赢。'],
+  bad:   ['大厂生存不过一场游戏，放轻松。','工牌会失效，但你的人生不会。','绩效只是一个字母，你是一个完整的人。','公司不会记得你加过的班，但你的家人会。','先照顾好自己，再去改变世界。'],
+  hidden:['大厂生存不过一场游戏，放轻松。','人生总有意外，有时候意外也挺好。'],
+};
+function titles(){
+  const t = [], q = Math.max(1,s.st.q);
+  if(s.st.juan/q > .55) t.push('卷王');
+  if(s.st.moyuTot/q > .55) t.push('摸鱼大师');
+  if(s.blame >= 2) t.push('背锅侠');
+  if(s.hair < 25) t.push('地中海');
+  if(s.st.companies >= 3) t.push('跳槽达人');
+  if(s.st.transfers >= 2) t.push('活水之王');
+  if(s.st.ride) t.push('一号工程元老');
+  if(s.st.bottom >= 2) t.push('绩效守门员');
+  if(s.st.top >= 3) t.push('顶格绩效传说');
+  if(s.flags.house) t.push('房奴');
+  if(s.flags.kid) t.push('奶爸奶妈');
+  if((s.st.pnl||0) >= 200) t.push('股神');
+  if((s.st.pnl||0) <= -50 || (s.st.scam||0) >= 1) t.push('被割过的韭菜');
+  if(s.pets.length) t.push(s.pets.length>=2 ? '猫狗双全' : (s.pets[0].type==='猫'?'猫奴':'狗爸狗妈'));
+  for(const a of TRAVEL_ACH) if((s.ach||[]).includes(a.k)) t.push(a.n);
+  for(const a of s.sAch) t.push(a);
+  if(s.rare) t.push(s.rare.n);
+  if(!t.length) t.push('普通打工人');
+  return t;
+}
+function end(k){
+  if(s.over) return;
+  s.over = true; s.queue = []; s.ending = k;
+  const e = ENDINGS[k];
+  s.quote = pick(QUOTES[e.t]);
+  const bonus = {good:15, mid:5, bad:-5, hidden:10}[e.t];
+  const sc = Math.log10(1+Math.max(0,s.money+invTotal()))*18 + (s.out?0:s.lvIdx/s.comp.exec)*30 + s.hp*.1 + s.san*.1 + bonus;
+  s.pct = clamp(Math.round(sc*1.05), 1, 99);
+  log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
+  try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
+  if(HAS_DOM) showEnding();
+}
+
+/* ============ 渲染 ============ */
+function $(id){ return document.getElementById(id); }
+function render(){
+  if(!HAS_DOM || !s) return;
+  const b = s.biz[s.bizIdx];
+  $('id1').innerHTML = `${s.comp.n}<span class="sep">/</span>${b.n}<span class="badge st${b.st}">${STN[b.st]}</span><span class="sep">/</span>${s.role.n}<span class="sep">/</span>${lvLabel()}`;
+  $('id2').innerHTML = `<span>${s.year} 年 Q${s.q} · <b>${s.age}</b> 岁 · 在职 ${Math.floor(s.compQ/4)} 年 ${s.compQ%4} 季<button class="mini" id="cohortBtn">同期入职的人 ›</button></span><span>存款 <b>${s.money}</b> 万${invTotal()>0?` · 投资 <b>${invTotal()}</b> 万`:''} · 年包约 ${Math.round(curPay())} 万${s.blame?` · 背锅 ${s.blame}/3`:''}${s.pets.length?` · ${s.pets.map(p=>(p.type==='猫'?'🐱':'🐶')+p.name).join(' ')}`:''}</span>`;
+  $('cohortBtn').onclick = showCohort;
+  const bars = [['能力','abi'],['健康','hp'],['精神','san'],['人脉','net'],['老板好感','boss'],['头发','hair']];
+  $('bars').innerHTML = bars.map(([n,k]) => { const v = Math.round(s[k]); return `<div class="bar"><span>${n}</span><div class="track"><div class="fill ${v<25&&k!=='abi'?'low':''}" style="width:${v}%"></div></div><span class="num">${v}</span></div>`; }).join('');
+  $('strat').innerHTML = `<span class="lab">策略</span>` + Object.entries(STRAT).map(([k,v]) => `<button class="seg ${s.strat===k?'on':''}" data-s="${k}">${v.n}</button>`).join('') + `<span class="grades">${s.grades.filter(g=>g!=='·').slice(-4).join(' · ') || '暂无绩效'}</span>`;
+  $('strat').querySelectorAll('.seg').forEach(x => x.onclick = () => { s.strat = x.dataset.s; render(); });
+  const busy = s.queue.length || s.over || s.unemployed;
+  const row = (k, lab, used) => `<span class="lab">${lab}</span>` + ACTIONS.map((a,i) => a.k!==k ? '' : `<button class="act" data-i="${i}" ${busy || used || (a.c && !a.c()) ? 'disabled' : ''}>${a.n}</button>`).join('') + `<span class="hint">${used ? '本季已用' : '每季 1 次'}</span>`;
+  $('actsW').innerHTML = row('w','工作',s.actedW);
+  $('actsL').innerHTML = row('l','生活',s.actedL);
+  document.querySelectorAll('#actsW .act, #actsL .act').forEach(x => x.onclick = () => doAction(+x.dataset.i));
+  $('next').disabled = !!(s.queue.length || s.over || s.unemployed);
+  const ch = s.queue[0];
+  $('choice').innerHTML = ch ? `<div class="cc"><h3>${ch.title}</h3><p>${ch.text}</p>${ch.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}${o.sub?`<small>${o.sub}</small>`:''}</button>`).join('')}</div>` : '';
+  $('choice').querySelectorAll('.opt').forEach(x => x.onclick = () => choose(+x.dataset.i));
+  requestAnimationFrame(() => window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'}));
+}
+
+let curRoll = null;
+function showRoll(){
+  curRoll = roll(); const r = curRoll;
+  $('odds').innerHTML = `这是约 <b>1 / ${Math.round(1/r.odds).toLocaleString('en-US')}</b> 的开局`;
+  const row = (k,v,sub,rare) => `<div class="row"><div class="k">${k}</div><div class="v">${rare?'<span class="chip rare">稀有</span>':''}${v}${sub?`<small>${sub}</small>`:''}</div></div>`;
+  const biz = r.comp.biz[r.bizIdx];
+  $('rollcard').innerHTML =
+    (r.rare ? row('稀有身份', r.rare.n, r.rare.d, true) : '') +
+    row('学历', r.edu.n, '', r.edu.top||r.edu.genius) +
+    row('入职方式', r.entry.n, r.entry.d, r.entry.lv&&r.entry.mult) +
+    row('公司', `${r.comp.n} <span class="chip">${r.comp.tag}</span>`, `${r.comp.d}<br>${r.comp.sys}`) +
+    row('业务', `${biz[0]} <span class="badge st${biz[1]}">${STN[biz[1]]}</span>`, '业务地位会随时间变化：边缘可能突然变核心，也可能被裁撤') +
+    row('岗位', r.role.n) +
+    row('家庭', r.fam.n, r.fam.d||'', r.fam.money>=500) +
+    row('天赋', r.traits.map(t=>`<span class="chip">${t.n}</span>`).join(''), r.traits.map(t=>t.d).join('；'));
+  let g = []; try{ g = JSON.parse(STORE.getItem('dc_endings')||'[]'); }catch(err){}
+  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('');
+}
+function showEnding(){
+  const e = ENDINGS[s.ending];
+  const cls = e.t==='good'?'good':e.t==='bad'?'bad':'mid';
+  const kind = {good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t];
+  $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}</div><h2 class="${cls}">${e.n}</h2>
+    <div class="story">${endText(s.ending)}</div>
+    <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
+    <div>${titles().map(t=>`<span class="chip">${t}</span>`).join('')}</div>
+    <div class="stats">
+      <div><span>终年</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
+      <div><span>最终职级</span><span>${lvLabel()}</span></div><div><span>身家</span><span>${r1(s.money+invTotal())} 万</span></div>
+      <div><span>待过的公司</span><span>${s.st.companies} 家</span></div><div><span>晋升</span><span>${s.st.promos} 次</span></div>
+      <div><span>背过的锅</span><span>${s.blame} 口</span></div><div><span>头发</span><span>${Math.round(s.hair)}</span></div>
+      <div><span>足迹</span><span>${s.visited.length} 地</span></div><div><span>爱好</span><span>${SPORTS.filter(x=>(s.sport[x.k]||0)>=3).map(x=>x.n).slice(0,3).join('、')||'—'}</span></div>
+      <div><span>投资盈亏</span><span>${(s.st.pnl||0)>=0?'+':''}${r1(s.st.pnl||0)} 万</span></div><div><span>陪伴你的</span><span>${s.pets.map(p=>p.name).join('、')||'—'}</span></div>
+    </div>
+    ${s.friends.length?`<div class="sum" style="font-size:13px;margin-top:10px">你的${s.friends[0].kind}：<b>${s.friends[0].p.name}</b>，现在${s.friends[0].p.out?s.friends[0].p.out:`在${s.friends[0].p.comp.n}`}。</div>`:''}
+    <div class="sum" style="font-size:13px;color:var(--mute);margin-top:10px">${cohortSummary()} <button class="mini" id="cohortEnd">看看他们</button></div>
+    <div class="quote">“${s.quote}”</div>
+    <div class="btns"><button class="btn primary" id="sharebtn">生成分享卡</button><button class="btn" id="again">再活一次</button><button class="btn" id="seelog">看看这一生</button></div></div>`;
+  $('sharebtn').onclick = showShare;
+  $('cohortEnd').onclick = showCohort;
+  $('ending').hidden = false;
+  $('again').onclick = () => { $('ending').hidden = true; $('game').hidden = true; $('dock').hidden = true; $('start').hidden = false; showRoll(); window.scrollTo(0,0); };
+  $('seelog').onclick = () => { $('ending').hidden = true; };
+  render();
+}
+function shareText(){
+  const e = ENDINGS[s.ending];
+  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，称号：${titles().join('、')}。${cohortSummary()}\n“${s.quote}”`;
+}
+function wrap(x, text, maxW){
+  const lines = []; let cur = '';
+  for(const ch of text){ if(x.measureText(cur+ch).width > maxW){ lines.push(cur); cur = ch; } else cur += ch; }
+  if(cur) lines.push(cur); return lines;
+}
+async function showShare(){
+  try{ await document.fonts.ready; }catch(err){}
+  const e = ENDINGS[s.ending], W = 750, H = 1600, P = 56;
+  const cv = document.createElement('canvas'); cv.width = W*2; cv.height = H*2;
+  const x = cv.getContext('2d'); x.scale(2,2);
+  const serif = '"Noto Serif SC","Songti SC",serif', sans = '-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+  const ink = '#23201b', mute = '#7b7468', col = {good:'#3f6b47',bad:'#b5361f',mid:'#2f5576',hidden:'#a8741a'}[e.t];
+  x.fillStyle = '#f3efe6'; x.fillRect(0,0,W,H);
+  let y = 96;
+  x.fillStyle = ink; x.font = `900 30px ${serif}`; x.fillText('大厂人生模拟器', P, y);
+  x.fillStyle = mute; x.font = `15px ${sans}`; x.textAlign = 'right'; x.fillText(`${s.year} 年 · ${s.age} 岁`, W-P, y); x.textAlign = 'left';
+  y += 22; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 2);
+  y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText({good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t], P, y);
+  y += 78; x.fillStyle = col; x.font = `900 72px ${serif}`; x.fillText(e.n, P, y);
+  y += 44; x.fillStyle = ink; x.font = `18px ${sans}`; x.fillText(`${s.comp.n} · ${s.role.n} · ${lvLabel()}`, P, y);
+  y += 40; x.font = `19px ${sans}`; x.fillStyle = '#3a352d';
+  const story = wrap(x, endText(s.ending), W-2*P).slice(0,6);
+  story.forEach((l,i) => { x.fillText(i===5 && wrap(x,endText(s.ending),W-2*P).length>6 ? l.slice(0,-1)+'…' : l, P, y); y += 32; });
+  y += 18; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 1);
+  y += 58; x.font = `20px ${serif}`; x.fillText('你的人生超过了', P, y);
+  const w1 = x.measureText('你的人生超过了').width + 12;
+  x.font = `900 48px ${serif}`; x.fillStyle = col; x.fillText(`${s.pct}%`, P+w1, y+4);
+  const w2 = x.measureText(`${s.pct}%`).width + 12;
+  x.fillStyle = ink; x.font = `20px ${serif}`; x.fillText('的打工人', P+w1+w2, y);
+  y += 30; x.fillRect(P, y, W-2*P, 1);
+  const st = [['工作',`${Math.floor(s.st.q/4)} 年`],['身家',`${r1(s.money+invTotal())} 万`],['待过的公司',`${s.st.companies} 家`],['晋升',`${s.st.promos} 次`],['足迹',`${s.visited.length} 地`],['头发',`${Math.round(s.hair)}`]];
+  y += 46; x.font = `18px ${sans}`;
+  st.forEach((kv,i) => { const cx = P + (i%2)*((W-2*P)/2), cy = y + Math.floor(i/2)*42; x.fillStyle = mute; x.fillText(kv[0], cx, cy); x.fillStyle = ink; x.textAlign = 'right'; x.fillText(kv[1], cx+(W-2*P)/2-24, cy); x.textAlign = 'left'; });
+  y += 3*42 + 10;
+  let cx = P; x.font = `16px ${sans}`;
+  for(const t of titles()){ const w = x.measureText(t).width + 24; if(cx + w > W-P){ cx = P; y += 40; } x.strokeStyle = ink; x.strokeRect(cx, y-22, w, 32); x.fillStyle = ink; x.fillText(t, cx+12, y); cx += w + 10; }
+  y += 70; x.fillStyle = ink; x.fillRect(P, y-30, W-2*P, 1);
+  x.font = `700 28px ${serif}`; x.textAlign = 'center';
+  wrap(x, `“${s.quote}”`, W-2*P-40).forEach(l => { y += 14; x.fillText(l, W/2, y+14); y += 30; });
+  const H2 = y + 110;
+  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-64); x.textAlign = 'left';
+  const out = document.createElement('canvas'); out.width = W*2; out.height = H2*2;
+  const o = out.getContext('2d'); o.drawImage(cv, 0, 0, W*2, H2*2, 0, 0, W*2, H2*2); o.scale(2,2);
+  o.strokeStyle = ink; o.lineWidth = 3; o.strokeRect(24,24,W-48,H2-48); o.lineWidth = 1; o.strokeRect(32,32,W-64,H2-64);
+  const url = out.toDataURL('image/png');
+  $('share').innerHTML = `<img src="${url}" alt="分享卡"><div class="tip">长按或右键图片即可保存</div>
+    <div class="btns"><button class="btn" id="copytxt">复制文字版</button><button class="btn" id="closeshare">关闭</button></div>
+    <textarea id="sharetxt" readonly></textarea>`;
+  $('share').hidden = false;
+  $('sharetxt').value = shareText();
+  $('closeshare').onclick = () => { $('share').hidden = true; };
+  $('copytxt').onclick = () => {
+    const t = shareText(), b = $('copytxt');
+    const fallback = () => { const ta = $('sharetxt'); ta.style.display = 'block'; ta.select(); b.textContent = '请手动复制下方文字'; };
+    try{ navigator.clipboard.writeText(t).then(() => { b.textContent = '已复制'; }, fallback); }catch(err){ fallback(); }
+  };
+}
+if(HAS_DOM){
+  $('reroll').onclick = showRoll;
+  $('go').onclick = () => { $('start').hidden = true; $('game').hidden = false; $('dock').hidden = false; startGame(curRoll); };
+  $('next').onclick = nextQuarter;
+  showRoll();
+}
+if(typeof module !== 'undefined') module.exports = {roll, startGame, nextQuarter, choose, doAction, getS:()=>s, ACTIONS};
+</script>
+</body>
+</html>

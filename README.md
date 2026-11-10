@@ -6,7 +6,7 @@
 
 ## 怎么玩
 - 直接用浏览器打开 `index.html` 就能玩，不需要安装任何东西。
-- 开启 GitHub Pages 后，可以通过 https://xiaowanmichelle-wq.github.io/Big-Tech-Life-Simulator/ 在线游玩。
+- 在线游玩：https://dachang.life
 
 ## 说明
 - 游戏中的公司均为虚构称呼（如“某短视频大厂”），职级与绩效体系参考公开报道整理，可能与实际情况有出入，仅供娱乐。

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>大厂人生模拟器</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
@@ -21,7 +21,10 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .sub{color:var(--mute);font-size:13px;letter-spacing:.08em}
 
 /* start */
-#start{padding:48px 0 64px}
+#start{padding:calc(40px + env(safe-area-inset-top)) 0 0}
+.startbar{position:sticky;bottom:0;z-index:4;background:var(--paper);border-top:1.5px solid var(--ink);margin:0 -16px;padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.startbar .btn{flex:1}
+@media(max-width:560px){#start{padding-top:calc(14px + env(safe-area-inset-top))}h1{font-size:28px}.masthead{margin-bottom:14px}.odds{margin-top:10px}.odds b{font-size:24px}.card{padding:12px 14px;margin:10px 0 18px}.row{padding:5px 0}}
 .masthead{border-bottom:3px double var(--ink);padding-bottom:14px;margin-bottom:28px}
 .odds{font-family:var(--serif);font-size:15px;margin:24px 0 6px;color:var(--mute)}
 .odds b{font-size:30px;color:var(--ink);font-weight:900;letter-spacing:.02em}
@@ -38,13 +41,13 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .btn:hover{background:var(--paper2)}
 .btn.primary{background:var(--ink);color:var(--paper)}
 .btn.primary:hover{background:#3a352d}
-.gallery{margin-top:36px;font-size:13px;color:var(--mute)}
+.gallery{margin:4px 0 24px;font-size:13px;color:var(--mute)}
 .gallery .g{display:inline-block;margin:3px 6px 3px 0;padding:1px 8px;border:1px solid var(--line)}
 .gallery .g.on{color:var(--ink);border-color:var(--ink)}
 
 /* game */
 #game{padding-bottom:200px}
-.top{position:sticky;top:0;background:var(--paper);z-index:5;padding:12px 0 8px;border-bottom:1.5px solid var(--ink)}
+.top{position:sticky;top:0;padding-top:calc(12px + env(safe-area-inset-top)) !important;background:var(--paper);z-index:5;padding:12px 0 8px;border-bottom:1.5px solid var(--ink)}
 .id1{font-family:var(--serif);font-weight:700;font-size:17px;line-height:1.5}
 .id1 .sep{color:var(--line);margin:0 6px}
 .badge{font-family:inherit;font-size:11.5px;font-weight:600;padding:0 6px;margin-left:4px;vertical-align:2px;border:1px solid}
@@ -92,9 +95,9 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .opt small{display:block;font-size:12px;opacity:.7}
 
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1.5px solid var(--ink);z-index:6}
-.dock .in{max-width:760px;margin:0 auto;padding:9px 16px 12px;display:flex;gap:12px;align-items:stretch}
+.dock .in{max-width:760px;margin:0 auto;padding:9px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:12px;align-items:stretch}
 .ctrl{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
-@media(max-width:560px){.dock .in{flex-wrap:wrap}.next{width:100%}.line .lab{width:44px}.line .hint{display:none}}
+@media(max-width:560px){.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.seg{padding:1px 10px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
 .act:hover:not(:disabled){background:var(--paper2)}
 .act:disabled,.next:disabled{opacity:.35;cursor:not-allowed}
@@ -148,11 +151,11 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
     </div>
     <div class="odds" id="odds"></div>
     <div class="card" id="rollcard"></div>
-    <div class="btns">
+    <div class="gallery" id="gallery"></div>
+    <div class="btns startbar">
       <button class="btn" id="reroll">重新投胎</button>
       <button class="btn primary" id="go">就这个了，入职！</button>
     </div>
-    <div class="gallery" id="gallery"></div>
   </section>
 
   <section id="game" hidden>
@@ -771,8 +774,8 @@ function joinCompany(of){
   s.boss = rnd(45,60); s.qs = []; s.reviews = []; s.grades = []; s.sinceProm = 0; s.lowStreak = 0; s.pip = false;
   s.compQ = 0; s.hunts = 0; s.st.companies++; s.optGrant = 0; s.aiVal = 1; s.unemployed = false;
   s.queue = []; // 前司的待办选择作废
-  friendOnJoin();
   log('入职', `你加入了${of.c.n}，职级 ${lvLabel()}，「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}）。`, 'head');
+  friendOnJoin();
 }
 
 /* ============ 分拆公司 ============ */
@@ -1603,6 +1606,10 @@ function render(){
   $('actsL').innerHTML = row('l','生活',s.actedL);
   document.querySelectorAll('#actsW .act, #actsL .act').forEach(x => x.onclick = () => doAction(+x.dataset.i));
   $('next').disabled = !!(s.queue.length || s.over || s.unemployed);
+  if(!$('game').hidden){
+    $('dock').hidden = !!(s.queue.length && !s.over);
+    requestAnimationFrame(() => { $('game').style.paddingBottom = ($('dock').hidden ? 40 : $('dock').offsetHeight + 24) + 'px'; });
+  }
   const ch = s.queue[0];
   $('choice').innerHTML = ch ? `<div class="cc"><h3>${ch.title}</h3><p>${ch.text}</p>${ch.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.t}${o.sub?`<small>${o.sub}</small>`:''}</button>`).join('')}</div>` : '';
   $('choice').querySelectorAll('.opt').forEach(x => x.onclick = () => choose(+x.dataset.i));

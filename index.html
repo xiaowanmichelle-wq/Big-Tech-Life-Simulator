@@ -2953,9 +2953,6 @@ function renderGallery(){
     showRewarded('hint').then(ok => { if(ok){ unlockHint(el.dataset.hk); renderGallery(); } else alert('暂时没有可看的广告，稍后再试。'); });
   });
 }
-/* WEB-PETNAME-START 网页版：用浏览器输入框给宠物起名 */
-if(HAS_DOM) PET_NAME_INPUT = cb => { let v = null; try{ v = window.prompt('给它起个名字（最多 8 个字）', ''); }catch(err){} cb(v); };
-/* WEB-PETNAME-END */
 /* WEB-ADS-START 网页广告：填入 AdSense 发布商 ID 并获准使用 H5 Games Ads 后生效；留空则不加载任何广告代码 */
 const ADSENSE_CLIENT = '';   // 例如 'ca-pub-1234567890123456'
 const ADSENSE_TEST = false;  // 调试时设为 true，会请求测试广告

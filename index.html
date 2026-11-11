@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>大厂人生模拟器</title>
+<meta name="description" content="你是数百万互联网打工人中的一个。随机投胎到一家大厂，按季度活下去：绩效、晋升、裁员、跳槽、第二人生，51 种结局。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="大厂人生模拟器">
+<meta property="og:title" content="大厂人生模拟器：你能在大厂活成什么样？">
+<meta property="og:description" content="随机投胎到一家大厂，按季度活下去。绩效、晋升、裁员、跳槽、第二人生，51 种结局等你解锁。">
+<meta property="og:url" content="https://dachang.life/">
+<meta property="og:image" content="https://dachang.life/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="大厂人生模拟器：你能在大厂活成什么样？">
+<meta name="twitter:image" content="https://dachang.life/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -47,6 +59,8 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .g.hint{border-style:dashed;font-size:12px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
 .lifebtn{width:100%;margin:2px 0 14px}
+.chal{border:1.5px solid var(--red);color:var(--ink);padding:10px 12px;margin:0 0 14px;font-size:14px;line-height:1.6;background:#fbf3ef}
+.chal b{color:var(--red)}
 #recap .life{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;cursor:pointer;background:var(--paper)}
 #recap .life>div:first-child{display:flex;justify-content:space-between;align-items:baseline;font-size:17px}
 #recap .life small{color:var(--mute);font-size:12px}
@@ -186,6 +200,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
       <h1>大厂人生模拟器</h1>
       <div class="sub">你是数百万互联网打工人中的一个 · 从入职那天开始，按季度活下去</div>
     </div>
+    <div class="chal" id="chal" hidden></div>
     <div class="odds" id="odds"></div>
     <div class="card" id="rollcard"></div>
     <div id="livesbox"></div>
@@ -377,6 +392,40 @@ const ENDINGS = {
 };
 
 /* ============ 抽卡 ============ */
+function rareEntry(rare){
+  const byName = n => ENTRIES.find(e => e.n === n);
+  return rare.key === 'vet' ? Object.assign({}, byName('社招跳槽'), {n:'社招回流', d:'在别家大厂做到高 P，被老东家高薪挖了回来'})
+    : Object.assign({}, byName('校招 SP'), {n:'天才少年特招', d:'跳过常规流程，CTO 亲自面试'});
+}
+/* ============ 同开局挑战：开局编码成一串短码 ============ */
+let CHAL = null; // {code, e}：朋友分享来的开局和 TA 的结局
+function rollCode(r){
+  const parts = [EDUS.indexOf(r.edu), r.rare ? RARES.indexOf(r.rare)+1 : 0, Math.max(0, ENTRIES.findIndex(e => e.n === r.entry.n)),
+    C.indexOf(r.comp), ROLES.indexOf(r.role), FAMS.indexOf(r.fam), r.bizIdx, Math.round(1/r.odds)].concat(r.traits.map(t => TRAITS.indexOf(t)));
+  return parts.map(n => n.toString(36)).join('-');
+}
+function rollFromCode(code){
+  try{
+    const p = String(code||'').split('-').map(x => parseInt(x, 36));
+    if(p.length < 9 || p.length > 10 || p.some(n => isNaN(n) || n < 0)) return null;
+    const [ed, ri, ei, ci, ro, fa, bi, od, ...tr] = p;
+    const edu = EDUS[ed], comp = C[ci], role = ROLES[ro], fam = FAMS[fa], rare = ri ? RARES[ri-1] : null, traits = tr.map(i => TRAITS[i]);
+    let entry = ENTRIES[ei];
+    if(!edu || !comp || !role || !fam || !entry || (ri && !rare) || traits.some(t => !t) || new Set(tr).size !== tr.length || !comp.biz[bi]) return null;
+    if(rare && (rare.key==='vet' || rare.key==='genius')) entry = rareEntry(rare);
+    return {edu, entry, comp, role, fam, traits, rare, bizIdx:bi, odds:1/Math.max(1, od)};
+  }catch(err){ return null; }
+}
+function setChallenge(code, e){ if(!rollFromCode(code)) return null; CHAL = {code, e: ENDINGS[e] ? e : null}; return CHAL; }
+function challengeLine(){
+  if(!s || !s.chal || !s.chal.e || !s.ending) return '';
+  const a = ENDINGS[s.chal.e].n, b = ENDINGS[s.ending].n;
+  return s.chal.e === s.ending ? `同一个开局，你和朋友的结局都是【${b}】。` : `同一个开局，朋友的结局是【${a}】，你的结局是【${b}】。`;
+}
+function getChallenge(){ return CHAL; }
+function clearChallenge(){ CHAL = null; }
+function challengeQuery(){ return `c=${s.rollCode}&e=${s.ending}`; }
+const SITE = 'https://dachang.life';
 function roll(){
   let odds = 1;
   const ep = (list,x,wf=y=>y.w) => wf(x) / list.reduce((a,y)=>a+wf(y),0);
@@ -386,8 +435,7 @@ function roll(){
   for(const r of RARES){ if(!rare && (!r.needTop || edu.top || edu.genius) && chance(r.p)){ rare = r; odds *= r.p; } }
   const wfE = x => x.w(edu); let entry;
   const byName = n => ENTRIES.find(e => e.n === n);
-  if(rare && rare.key==='vet') entry = Object.assign({}, byName('社招跳槽'), {n:'社招回流', d:'在别家大厂做到高 P，被老东家高薪挖了回来'});
-  else if(rare && rare.key==='genius') entry = Object.assign({}, byName('校招 SP'), {n:'天才少年特招', d:'跳过常规流程，CTO 亲自面试'});
+  if(rare && (rare.key==='vet' || rare.key==='genius')) entry = rareEntry(rare);
   else {
     entry = wpick(ENTRIES,wfE); odds *= ep(ENTRIES,entry,wfE);
     if(rare && rare.key==='kin' && entry.out) entry = byName(edu.genius ? '社招跳槽' : '实习留用');
@@ -399,6 +447,7 @@ function roll(){
   for(let i=0;i<nT;i++) traits.push(pool.splice(rnd(0,pool.length-1),1)[0]);
   odds *= nT===1 ? .6/10 : .4/45;
   const bw = comp.biz.map(b => entry.edge ? (b[1]===0?1:0) : entry.lv ? [1,3,6][b[1]] : [2,4,3][b[1]]);
+  if(!bw.some(v => v > 0)) bw.fill(1); // 公司没有边缘业务时，被收购并入的业务按普通业务处理
   const tot = bw.reduce((a,b)=>a+b,0); let x = R()*tot, bizIdx = 0;
   for(let i=0;i<bw.length;i++){ x -= bw[i]; if(x<0){ bizIdx = i; break; } }
   odds *= bw[bizIdx]/tot;
@@ -437,6 +486,7 @@ function startGame(r){
     if(r.rare.key==='genius'){ s.abi = 93; s.lvIdx = Math.min(c.exec-2, s.lvIdx+2); s.mult = 1.4; s.san -= 10; s.out=false; }
     if(r.rare.key==='vet'){ s.age = s.startAge = 33; s.lvIdx = c.exec-2; s.money += 380; s.abi = 80; s.hair = 45; s.hp -= 10; s.out=false; }
   }
+  s.rollCode = rollCode(r); s.chal = CHAL && CHAL.code === s.rollCode ? {e:CHAL.e} : null;
   s.cohort = makeCohort(); s.friends = []; s.others = [];
   if(HAS_DOM){ $('log').innerHTML=''; }
   log('入职', `你加入了${c.n}，${s.out?'身份是外包驻场':`职级 ${lvLabel()}（共 ${c.lv.length} 档，升到 ${c.lv[c.exec]} 算进入高管层）`}，分到「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}），岗位是${s.role.n}。`, 'head');
@@ -2388,8 +2438,10 @@ function render(){
 }
 
 let curRoll = null;
-function showRoll(){
-  curRoll = roll(); const r = curRoll;
+function showRoll(fromChal){
+  curRoll = (fromChal && CHAL && rollFromCode(CHAL.code)) || roll(); if(!fromChal) CHAL = null; const r = curRoll;
+  $('chal').hidden = !CHAL;
+  if(CHAL) $('chal').innerHTML = `<b>朋友发来一个开局挑战</b><br>同一个开局${CHAL.e ? `，朋友的结局是【${ENDINGS[CHAL.e].n}】` : ''}。你会走出什么样的人生？`;
   $('odds').innerHTML = `这是约 <b>1 / ${Math.round(1/r.odds).toLocaleString('en-US')}</b> 的开局`;
   const row = (k,v,sub,rare) => `<div class="row"><div class="k">${k}</div><div class="v">${rare?'<span class="chip rare">稀有</span>':''}${v}${sub?`<small>${sub}</small>`:''}</div></div>`;
   const biz = r.comp.biz[r.bizIdx];
@@ -2419,6 +2471,7 @@ function showEnding(){
   $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}</div><h2 class="${cls}">${e.n}</h2>
     <div class="story">${endText(s.ending)}</div>
     <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
+    ${s.chal && s.chal.e ? `<div class="chal">${challengeLine()}</div>` : ''}
     <div>${titles().map(t=>`<span class="chip">${t}${(s.newTitles||[]).includes(t)?' <b style="color:var(--red,#c33)">新</b>':''}</span>`).join('')}</div>
     <div class="stats">
       <div><span>终年</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
@@ -2486,7 +2539,7 @@ function showLives(){
 }
 function shareText(){
   const e = ENDINGS[s.ending];
-  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，称号：${titles().join('、')}。${cohortSummary()}\n“${s.quote}”`;
+  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，称号：${titles().join('、')}。${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
 }
 function wrap(x, text, maxW){
   const lines = []; let cur = '';
@@ -2527,29 +2580,34 @@ async function showShare(){
   y += 70; x.fillStyle = ink; x.fillRect(P, y-30, W-2*P, 1);
   x.font = `700 28px ${serif}`; x.textAlign = 'center';
   wrap(x, `“${s.quote}”`, W-2*P-40).forEach(l => { y += 14; x.fillText(l, W/2, y+14); y += 30; });
-  const H2 = y + 110;
-  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-64); x.textAlign = 'left';
+  const H2 = y + 140;
+  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-94);
+  x.font = `700 26px ${serif}`; x.fillStyle = ink; x.fillText('dachang.life', W/2, H2-60); x.textAlign = 'left';
   const out = document.createElement('canvas'); out.width = W*2; out.height = H2*2;
   const o = out.getContext('2d'); o.drawImage(cv, 0, 0, W*2, H2*2, 0, 0, W*2, H2*2); o.scale(2,2);
   o.strokeStyle = ink; o.lineWidth = 3; o.strokeRect(24,24,W-48,H2-48); o.lineWidth = 1; o.strokeRect(32,32,W-64,H2-64);
   const url = out.toDataURL('image/png');
   $('share').innerHTML = `<img src="${url}" alt="分享卡"><div class="tip">长按或右键图片即可保存</div>
-    <div class="btns"><button class="btn" id="copytxt">复制文字版</button><button class="btn" id="closeshare">关闭</button></div>
+    <div class="btns"><button class="btn primary" id="copylink">复制挑战链接</button><button class="btn" id="copytxt">复制文字版</button><button class="btn" id="closeshare">关闭</button></div>
     <textarea id="sharetxt" readonly></textarea>`;
   $('share').hidden = false;
   $('sharetxt').value = shareText();
   $('closeshare').onclick = () => { $('share').hidden = true; };
-  $('copytxt').onclick = () => {
-    const t = shareText(), b = $('copytxt');
-    const fallback = () => { const ta = $('sharetxt'); ta.style.display = 'block'; ta.select(); b.textContent = '请手动复制下方文字'; };
+  $('copylink').onclick = () => copyOut(`同一个开局，我的结局是【${e.n}】，你能活成什么样？${SITE}/?${challengeQuery()}`, $('copylink'));
+  $('copytxt').onclick = () => copyOut(shareText(), $('copytxt'));
+}
+function copyOut(t, b){
+  {
+    const fallback = () => { const ta = $('sharetxt'); ta.value = t; ta.style.display = 'block'; ta.select(); b.textContent = '请手动复制下方文字'; };
     try{ navigator.clipboard.writeText(t).then(() => { b.textContent = '已复制'; }, fallback); }catch(err){ fallback(); }
-  };
+  }
 }
 if(HAS_DOM){
-  $('reroll').onclick = showRoll;
+  $('reroll').onclick = () => showRoll();
   $('go').onclick = () => { $('start').hidden = true; $('game').hidden = false; $('dock').hidden = false; startGame(curRoll); };
   $('next').onclick = nextQuarter;
-  showRoll();
+  try{ const q = new URLSearchParams(location.search); if(q.get('c')) setChallenge(q.get('c'), q.get('e')); }catch(err){}
+  showRoll(true);
 }
 if(typeof module !== 'undefined') module.exports = {roll, startGame, nextQuarter, choose, doAction, getS:()=>s, ACTIONS};
 </script>

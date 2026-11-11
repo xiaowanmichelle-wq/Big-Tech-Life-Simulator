@@ -1700,7 +1700,6 @@ function lifeHighlights(){
       else if(ic === '📊') t = `这一年投资${((l.sub||'').match(/全年(盈利|亏损) [\d.]+ 万/) || [''])[0].replace('全年','')}`;
       else if(ic === '🌟' || ic === '📉') t = t.replace(/^【绩效】/, ic === '🌟' ? '顶格绩效 · ' : '最低绩效 · ');
       else t = hlText(ic, l);
-      if(t.length > 66) t = t.slice(0, 64) + '…';
       out.push({y:l.y, age:l.age, icon:ic, text:t, end: ic === '🏁'});
       break;
     }

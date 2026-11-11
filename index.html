@@ -57,8 +57,11 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .g{display:inline-block;margin:3px 6px 3px 0;padding:1px 8px;border:1px solid var(--line)}
 .gallery .g.on{color:var(--ink);border-color:var(--ink)}
 .gallery .g.hint{border-style:dashed;font-size:12px}
+.gallery .g.tap{cursor:pointer;border-color:var(--red);color:var(--red)}
+.gallery .hinttip{font-size:12px;color:var(--red);margin:6px 0 2px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
 .lifebtn{width:100%;margin:2px 0 14px}
+.rewindbtn{width:100%;margin-top:10px;border-color:var(--red);color:var(--red)}
 .dailybtn{width:100%;margin:0 0 14px;border-color:var(--red);color:var(--red)}
 .sting{font-family:var(--serif,"Noto Serif SC",serif);font-weight:700;font-size:18px;color:var(--red);margin:10px 0 4px;line-height:1.5}
 .persona{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:baseline}
@@ -569,6 +572,7 @@ const STRAT = {
 
 function nextQuarter(){
   if(s.over || s.queue.length || s.unemployed) return;
+  snapQuarter();
   s.turn++; s.q++; if(s.q>4){ s.q=1; s.year++; }
   s.st.q++; s.compQ++; s.sinceProm++; s.actedW=false; s.actedL=false;
   if(s.turn % 4 === 0) s.age++;
@@ -1807,6 +1811,70 @@ function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1
 function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
 function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }
 function rarestTitle(list){ let best = null; for(const t of (list||titles())){ const v = RARITY.t[t]; if(v != null && (!best || v < best[1])) best = [t, v]; } return best && best[1] < 30 ? {n:best[0], p:rarePhrase(best[1])} : null; }
+/* ============ 广告（激励视频）：各平台注入 ADS.provider，没有就不显示广告入口 ============ */
+const ADS = { provider: null };   // provider: { ready():bool, showRewarded(name):Promise<bool> }
+function adReady(){ try{ return !!(ADS.provider && ADS.provider.ready()); }catch(err){ return false; } }
+function showRewarded(name){ if(!adReady()) return Promise.resolve(false); return Promise.resolve(ADS.provider.showRewarded(name)).then(v => !!v, () => false); }
+// 回到一年前：每季度开始前存一份快照，坏结局时可以看广告回到 4 个季度前，每局一次
+function cloneState(o, memo){
+  if(o === null || typeof o !== 'object') return o;
+  if(STATIC_REFS.has(o)) return o;
+  if(memo.has(o)) return memo.get(o);
+  const out = Array.isArray(o) ? [] : {};
+  memo.set(o, out);
+  for(const k of Object.keys(o)) out[k] = (k === 'snaps') ? [] : cloneState(o[k], memo);
+  return out;
+}
+let STATIC_REFS = null;
+function staticRefs(){
+  if(STATIC_REFS) return;
+  STATIC_REFS = new Set();
+  const add = x => { if(x && typeof x === 'object' && !STATIC_REFS.has(x)){ STATIC_REFS.add(x); } };
+  [C, EDUS, ENTRIES, ROLES, FAMS, TRAITS, RARES, ENDINGS, SPORTS, PLACES].forEach(list => { add(list); (Array.isArray(list) ? list : Object.values(list)).forEach(add); });
+  Object.values(CH).forEach(add);
+}
+function snapQuarter(){
+  if(!s || s.over || s.queue.length) return;
+  staticRefs();
+  if(!s.snaps) s.snaps = [];
+  s.snaps.push(cloneState(s, new Map()));
+  if(s.snaps.length > 5) s.snaps.shift();
+}
+function canRewind(){ return !!(s && s.over && !s.rewound && ENDINGS[s.ending].t === 'bad' && s.snaps && s.snaps.length >= 4); }
+function doRewind(){
+  if(!canRewind()) return false;
+  const snaps = s.snaps.slice(), back = snaps[snaps.length - 4], keep = snaps.slice(0, snaps.length - 4);
+  const prevEnd = ENDINGS[s.ending].n, prevKey = s.ending;
+  staticRefs();
+  s = cloneState(back, new Map()); s.snaps = keep; s.rewound = true;
+  try{ const L5 = pastLives(); if(L5.length){ L5.shift(); STORE.setItem('dc_lives', JSON.stringify(L5)); } }catch(err){}
+  const k = prevKey; let tip = `这一次，别再走到【${prevEnd}】。`;
+  if(k === 'health'){ s.hp = Math.max(s.hp, 40); tip = '这一次，你提前去做了体检。健康回到了 ' + Math.round(s.hp) + '。'; }
+  else if(k === 'burnout'){ s.san = Math.max(s.san, 40); tip = '这一次，你提前找了心理咨询。精神回到了 ' + Math.round(s.san) + '。'; }
+  else if(k === 'blame'){ s.blame = Math.max(0, s.blame - 1); tip = '这一次，你把所有沟通都留了书面记录。'; }
+  log('', `⏪ 你回到了一年前。`, 'head', tip);
+  return true;
+}
+// 图鉴提示：看广告解锁一个“？？？”的提示，每天最多 5 次
+const ENDING_HINTS = { fire:'攒够足够多的钱', exec:'一路升到公司最高层', foreign:'去外企工作', fossil:'在一家公司待很多很多年', health:'身体被透支', burnout:'精神被耗尽', blame:'背了太多锅',
+  moyu:'一直摸鱼，还没被发现', bankrupt:'公司比你先撑不住', noncompete:'跳槽去了对手公司', angel:'赚够钱后去投资', spinoff:'跟着业务分拆出去', abroad:'去海外工作', ai_replaced:'岗位被 AI 接管', lottery:'运气好到离谱' };
+function endingHint(k){
+  const e = ENDINGS[k]; if(!e) return '';
+  if(e.ch){ const tier = k.split('_').pop(); return `离开大厂后选择“${CH[e.ch].name}”，走到${({good:'最好',mid:'中间',bad:'最坏'})[tier]}的结局`; }
+  return ENDING_HINTS[k] || '';
+}
+function titleHint(n){
+  for(const k in CH_TITLES) for(const x of CH_TITLES[k]) if(x[0] === n) return `离开大厂后去“${CH[k].name}”，${x[1]}`;
+  const r = RARES.find(x => x.n === n); if(r) return `稀有身份：${r.d}`;
+  return '';
+}
+function hintsUnlocked(){ try{ return JSON.parse(STORE.getItem('dc_hints') || '[]'); }catch(err){ return []; } }
+function hintsLeftToday(){ let d = {}; try{ d = JSON.parse(STORE.getItem('dc_hint_day') || '{}'); }catch(err){} return d.day === dailyKey() ? Math.max(0, 5 - (d.n || 0)) : 5; }
+function unlockHint(key){
+  const list = hintsUnlocked(); if(!list.includes(key)){ list.push(key); STORE.setItem('dc_hints', JSON.stringify(list)); }
+  let d = {}; try{ d = JSON.parse(STORE.getItem('dc_hint_day') || '{}'); }catch(err){}
+  if(d.day !== dailyKey()) d = {day: dailyKey(), n: 0}; d.n = (d.n || 0) + 1; STORE.setItem('dc_hint_day', JSON.stringify(d));
+}
 // 第二人生称号：[称号, 提示, 条件(c, tier)]
 const CH_TITLES = {
   civil:[['上岸','考公上岸',c=>c.data.in], ['笔杆子','在单位里写出了名堂',(c,t)=>t==='good']],
@@ -2589,16 +2657,51 @@ function showRoll(fromChal, daily){
     row('岗位', r.role.n) +
     row('家庭', r.fam.n, r.fam.d||'', r.fam.money>=500) +
     row('天赋', r.traits.map(t=>`<span class="chip">${t.n}</span>`).join(''), r.traits.map(t=>t.d).join('；'));
+  renderGallery();
+}
+function renderGallery(){
   let g = []; try{ g = JSON.parse(STORE.getItem('dc_endings')||'[]'); }catch(err){}
+  const hk = hintsUnlocked(), canAd = adReady() && hintsLeftToday() > 0;
+  const lockE = k => { const t = hk.includes('e:'+k) ? '？' + endingHint(k) : '？？？'; return `<span class="g ${hk.includes('e:'+k) ? 'hint' : (canAd ? 'tap' : '')}" data-hk="e:${k}">${t}</span>`; };
+  const lockT = x => { if(x[2]) return `<span class="g hint">？${x[2]}</span>`; const t = hk.includes('t:'+x[1]) ? '？' + titleHint(x[1]) : '？？？'; return `<span class="g ${hk.includes('t:'+x[1]) ? 'hint' : (canAd ? 'tap' : '')}" data-hk="t:${x[1]}">${t}</span>`; };
   const nL = pastLives().length;
   $('livesbox').innerHTML = nL ? `<button class="btn lifebtn" id="lives">回看过往人生（最近 ${nL} 段）</button>` : '';
   if(nL) $('lives').onclick = showLives;
   let tg = []; try{ tg = JSON.parse(STORE.getItem('dc_titles')||'[]'); }catch(err){}
   const dex = titleDex(), cats = [...new Set(dex.map(x=>x[0]))];
-  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n+(RARITY.e[k] != null ? `<small class="rp">${fmtPct(RARITY.e[k])}</small>` : ''):'？？？'}</span>`).join('')
+  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => (g.includes(k) ? `<span class="g on">${e.n}${RARITY.e[k] != null ? `<small class="rp">${fmtPct(RARITY.e[k])}</small>` : ''}</span>` : lockE(k))).join('')
+    + (canAd ? `<div class="hinttip">点“？？？”可以看个广告解锁提示（今天还剩 ${hintsLeftToday()} 次）</div>` : '')
     + `<div style="margin-top:18px">称号图鉴 ${dex.filter(x=>tg.includes(x[1])).length} / ${dex.length}</div>`
-    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}${RARITY.t[x[1]] != null ? `<small class="rp">${fmtPct(RARITY.t[x[1]])}</small>` : ''}</span>` : `<span class="g hint">${x[2] ? '？' + x[2] : '？？？'}</span>`).join('')).join('');
+    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}${RARITY.t[x[1]] != null ? `<small class="rp">${fmtPct(RARITY.t[x[1]])}</small>` : ''}</span>` : lockT(x)).join('')).join('');
+  if(canAd) document.querySelectorAll('#gallery .g.tap').forEach(el => el.onclick = () => {
+    if(!confirm(`看一个广告，解锁这条提示？（今天还剩 ${hintsLeftToday()} 次）`)) return;
+    showRewarded('hint').then(ok => { if(ok){ unlockHint(el.dataset.hk); renderGallery(); } else alert('暂时没有可看的广告，稍后再试。'); });
+  });
 }
+/* WEB-ADS-START 网页广告：填入 AdSense 发布商 ID 并获准使用 H5 Games Ads 后生效；留空则不加载任何广告代码 */
+const ADSENSE_CLIENT = '';   // 例如 'ca-pub-1234567890123456'
+const ADSENSE_TEST = false;  // 调试时设为 true，会请求测试广告
+(function initWebAds(){
+  if(!HAS_DOM || !ADSENSE_CLIENT || ADS.provider) return;
+  let ready = false;
+  const sc = document.createElement('script');
+  sc.async = true; sc.crossOrigin = 'anonymous';
+  sc.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + ADSENSE_CLIENT;
+  sc.setAttribute('data-ad-frequency-hint', '30s');
+  if(ADSENSE_TEST) sc.setAttribute('data-adbreak-test', 'on');
+  document.head.appendChild(sc);
+  window.adsbygoogle = window.adsbygoogle || [];
+  const adBreak = window.adBreak = window.adConfig = o => window.adsbygoogle.push(o);
+  window.adConfig({ preloadAdBreaks: 'on', sound: 'off', onReady: () => { ready = true; try{ if(!$('start').hidden) renderGallery(); }catch(err){} } });
+  ADS.provider = {
+    ready: () => ready,
+    showRewarded: name => new Promise(resolve => {
+      let granted = false;
+      adBreak({ type: 'reward', name, beforeReward: showAdFn => showAdFn(), adViewed: () => { granted = true; }, adDismissed: () => {}, adBreakDone: () => resolve(granted) });
+    }),
+  };
+})();
+/* WEB-ADS-END */
 function showEnding(){
   const e = ENDINGS[s.ending];
   const cls = e.t==='good'?'good':e.t==='bad'?'bad':'mid';
@@ -2623,8 +2726,13 @@ function showEnding(){
     ${s.friends.length?`<div class="sum" style="font-size:13px;margin-top:10px">你的${s.friends[0].kind}：<b>${s.friends[0].p.name}</b>，现在${s.friends[0].p.out?s.friends[0].p.out:`在${s.friends[0].p.comp.n}`}。</div>`:''}
     <div class="sum" style="font-size:13px;color:var(--mute);margin-top:10px">${cohortSummary()} <button class="mini" id="cohortEnd">看看他们</button></div>
     <div class="quote">“${s.quote}”</div>
-    <div class="btns"><button class="btn primary" id="recapbtn">回看这一生</button><button class="btn" id="sharebtn">生成分享卡</button><button class="btn" id="again">重新投胎</button></div></div>`;
+    <div class="btns"><button class="btn primary" id="recapbtn">回看这一生</button><button class="btn" id="sharebtn">生成分享卡</button><button class="btn" id="again">重新投胎</button></div>
+    ${canRewind() && adReady() ? '<button class="btn rewindbtn" id="rewind">⏪ 看个广告，回到一年前</button>' : ''}</div>`;
   $('sharebtn').onclick = showShare;
+  if($('rewind')) $('rewind').onclick = () => showRewarded('rewind').then(ok => {
+    if(!ok){ alert('广告没有看完，或者暂时没有广告，稍后再试。'); return; }
+    if(doRewind()){ ['ending','recap','share','cohort'].forEach(id => { const el = $(id); if(el) el.hidden = true; }); render(); }
+  });
   $('cohortEnd').onclick = showCohort;
   $('ending').hidden = false;
   $('again').onclick = restartGame;

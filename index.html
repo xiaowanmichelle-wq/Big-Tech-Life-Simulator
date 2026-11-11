@@ -46,6 +46,12 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .g.on{color:var(--ink);border-color:var(--ink)}
 .gallery .g.hint{border-style:dashed;font-size:12px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
+.lifebtn{width:100%;margin:2px 0 14px}
+#recap .life{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;cursor:pointer;background:var(--paper)}
+#recap .life>div:first-child{display:flex;justify-content:space-between;align-items:baseline;font-size:17px}
+#recap .life small{color:var(--mute);font-size:12px}
+#recap .life .rsub{margin:4px 0 0;border:0;padding:0}
+#recap .lives{min-height:calc(100vh - 220px)}
 
 /* game */
 #game{padding-bottom:200px}
@@ -182,6 +188,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
     </div>
     <div class="odds" id="odds"></div>
     <div class="card" id="rollcard"></div>
+    <div id="livesbox"></div>
     <div class="gallery" id="gallery"></div>
     <div class="btns startbar">
       <button class="btn" id="reroll">重新投胎</button>
@@ -1679,6 +1686,7 @@ function end(k){
   s.pct = clamp(Math.round(sc*1.05), 1, 99);
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
+  try{ const L5 = pastLives(); L5.unshift(lifeRecord()); STORE.setItem('dc_lives', JSON.stringify(L5.slice(0,5))); }catch(err){}
   try{ const g = JSON.parse(STORE.getItem('dc_titles')||'[]'); s.newTitles = titles().filter(t => !g.includes(t)); if(s.newTitles.length) STORE.setItem('dc_titles', JSON.stringify(g.concat(s.newTitles))); }catch(err){ s.newTitles = []; }
   if(HAS_DOM) showEnding();
 }
@@ -2295,6 +2303,14 @@ function hlText(ic, l){
   return t.split('。')[0];
 }
 const HL_CAP = {'✨':5, '🌧':3, '🌟':3, '📊':3, '🏅':5, '📉':3, '🐾':2, '🤝':4};
+function lifeRecord(){
+  const e = ENDINGS[s.ending], d = new Date(), p2 = n => String(n).padStart(2,'0');
+  return { date:`${d.getMonth()+1} 月 ${d.getDate()} 日 ${p2(d.getHours())}:${p2(d.getMinutes())}`, n:e.n, t:e.t, pct:s.pct, quote:s.quote, titles:titles(),
+    who:`${s.edu.n} · ${s.comp.n} · ${s.role.n}`,
+    sub:`${s.startAge} 岁入行 → ${s.age} 岁 · ${Math.floor(s.st.q/4)} 年 · ${s.st.companies} 家公司 · 晋升 ${s.st.promos} 次 · 身家 ${r1(s.money+invTotal())} 万`,
+    hl:lifeHighlights() };
+}
+function pastLives(){ try{ return JSON.parse(STORE.getItem('dc_lives')||'[]'); }catch(err){ return []; } }
 function lifeHighlights(){
   const out = [], cnt = {};
   for(const l of s.log){
@@ -2339,7 +2355,7 @@ function render(){
     $('strat').innerHTML = `<span class="lab">结局</span><b style="font-family:var(--serif)">${ENDINGS[s.ending].n}</b><span class="grades">超过 ${s.pct}% 的打工人</span>`;
     $('actsW').innerHTML = `<div class="endbar"><button class="btn primary" id="dRecap">回看这一生</button><button class="btn" id="dAgain">重新投胎</button></div>`;
     $('actsL').innerHTML = '';
-    $('dRecap').onclick = showRecap; $('dAgain').onclick = restartGame;
+    $('dRecap').onclick = () => showRecap(); $('dAgain').onclick = restartGame;
   }
   if(!$('game').hidden){
     $('dock').hidden = !!(s.queue.length && !s.over);
@@ -2367,6 +2383,9 @@ function showRoll(){
     row('家庭', r.fam.n, r.fam.d||'', r.fam.money>=500) +
     row('天赋', r.traits.map(t=>`<span class="chip">${t.n}</span>`).join(''), r.traits.map(t=>t.d).join('；'));
   let g = []; try{ g = JSON.parse(STORE.getItem('dc_endings')||'[]'); }catch(err){}
+  const nL = pastLives().length;
+  $('livesbox').innerHTML = nL ? `<button class="btn lifebtn" id="lives">回看过往人生（最近 ${nL} 段）</button>` : '';
+  if(nL) $('lives').onclick = showLives;
   let tg = []; try{ tg = JSON.parse(STORE.getItem('dc_titles')||'[]'); }catch(err){}
   const dex = titleDex(), cats = [...new Set(dex.map(x=>x[0]))];
   $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('')
@@ -2397,7 +2416,7 @@ function showEnding(){
   $('cohortEnd').onclick = showCohort;
   $('ending').hidden = false;
   $('again').onclick = restartGame;
-  $('recapbtn').onclick = showRecap;
+  $('recapbtn').onclick = () => showRecap();
   render();
 }
 function restartGame(){
@@ -2405,8 +2424,8 @@ function restartGame(){
   $('game').hidden = true; $('dock').hidden = true; $('start').hidden = false;
   showRoll(); window.scrollTo(0,0);
 }
-function showRecap(){
-  const e = ENDINGS[s.ending], hl = lifeHighlights();
+function showRecap(rec, past){
+  rec = rec || lifeRecord(); const e = {n:rec.n, t:rec.t}, hl = rec.hl;
   const step = Math.min(260, Math.max(90, 5200 / Math.max(1, hl.length)));
   const cls = {good:'var(--green)',bad:'var(--red)',mid:'var(--blue)',hidden:'var(--amber)'}[e.t];
   let lastY = null;
@@ -2415,24 +2434,35 @@ function showRecap(){
     return `<div class="ti ${x.end?'end':''}" style="--d:${(i*step/1000).toFixed(2)}s"><div class="yr">${yr}</div><div class="tx"${x.end?` style="color:${cls}"`:''}><span class="ic">${x.icon}</span>${x.text}</div></div>`;
   }).join('');
   $('recap').innerHTML = `<div class="rc" id="rc">
-    <div class="rtop"><h2>这一生</h2><button class="mini" id="rskip">跳过动画</button></div>
-    <div class="rsub">${s.startAge} 岁入行 → ${s.age} 岁 · ${Math.floor(s.st.q/4)} 年 · ${s.st.companies} 家公司 · 晋升 ${s.st.promos} 次 · 身家 ${r1(s.money+invTotal())} 万</div>
+    <div class="rtop"><h2>${past ? '那一生' : '这一生'}</h2><button class="mini" id="rskip">跳过动画</button></div>
+    <div class="rsub">${past ? rec.date + ' · ' + rec.who + '<br>' : ''}${rec.sub}</div>
     <div class="tl">${items}</div>
     <div class="rend" style="--d:${((hl.length*step+300)/1000).toFixed(2)}s">
-      <div class="pct">你的人生超过了 <b style="color:${cls}">${s.pct}%</b> 的打工人</div>
-      <div style="margin-top:8px">${titles().map(t=>`<span class="chip">${t}</span>`).join('')}</div>
-      <div class="q">“${s.quote}”</div>
+      <div class="pct">你的人生超过了 <b style="color:${cls}">${rec.pct}%</b> 的打工人</div>
+      <div style="margin-top:8px">${rec.titles.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
+      <div class="q">“${rec.quote}”</div>
     </div>
-    <div class="rbar">
+    ${past ? `<div class="rbar"><div class="btns"><button class="btn" id="rlives">其他几段人生</button><button class="btn primary" id="rclose">返回</button></div></div></div>` : `<div class="rbar">
       <div class="btns"><button class="btn primary" id="rshare">生成分享卡</button><button class="btn" id="ragain">重新投胎</button></div>
       <div class="rlinks"><a id="rlog">查看完整日志</a><a id="rback">返回结局</a></div>
-    </div></div>`;
+    </div></div>`}`;
   $('recap').hidden = false; $('recap').scrollTop = 0; $('ending').hidden = true;
   $('rskip').onclick = () => { $('rc').classList.add('noanim'); };
+  if(past){ $('rclose').onclick = () => { $('recap').hidden = true; }; $('rlives').onclick = showLives; return; }
   $('rshare').onclick = showShare;
   $('ragain').onclick = restartGame;
   $('rlog').onclick = () => { $('recap').hidden = true; render(); };
   $('rback').onclick = () => { $('recap').hidden = true; $('ending').hidden = false; };
+}
+function showLives(){
+  const L5 = pastLives(); if(!L5.length) return;
+  const col = t => ({good:'var(--green)',bad:'var(--red)',mid:'var(--blue)',hidden:'var(--amber)'}[t]);
+  $('recap').innerHTML = `<div class="rc noanim"><div class="rtop"><h2>过往人生</h2></div><div class="rsub">最近 ${L5.length} 段人生，点开回看高光时刻</div>
+    <div class="lives">${L5.map((r,i) => `<div class="life" data-i="${i}"><div><b style="color:${col(r.t)}">${r.n}</b><small>${r.date}</small></div><div class="rsub">${r.who}<br>${r.sub}</div></div>`).join('')}</div>
+    <div class="rbar"><div class="btns"><button class="btn primary" id="rclose">返回</button></div></div></div>`;
+  $('recap').hidden = false; $('recap').scrollTop = 0;
+  $('rclose').onclick = () => { $('recap').hidden = true; };
+  document.querySelectorAll('#recap .life').forEach(el => el.onclick = () => showRecap(L5[+el.dataset.i], true));
 }
 function shareText(){
   const e = ENDINGS[s.ending];

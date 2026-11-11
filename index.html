@@ -1663,8 +1663,8 @@ function titleDex(){
   ];
   SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
   TRAVEL_ACH.forEach(a => d.push(['旅行', a.n, {t5:'去过 5 个地方', t10:'去过 10 个地方', cn8:'去过 8 个国内城市', ab5:'去过 5 个国家', all:'所有地方都去过'}[a.k]]));
-  Object.values(CH_TITLES).forEach(a => a.forEach(x => d.push(['第二人生', x[0], x[1]])));
-  RARES.forEach(r => d.push(['稀有身份', r.n, '投胎时极小概率抽到']));
+  Object.values(CH_TITLES).forEach(a => a.forEach(x => d.push(['第二人生', x[0], ''])));
+  RARES.forEach(r => d.push(['稀有身份', r.n, '']));
   return d;
 }
 function titles(){
@@ -2410,7 +2410,7 @@ function showRoll(){
   const dex = titleDex(), cats = [...new Set(dex.map(x=>x[0]))];
   $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('')
     + `<div style="margin-top:18px">称号图鉴 ${dex.filter(x=>tg.includes(x[1])).length} / ${dex.length}</div>`
-    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}</span>` : `<span class="g hint">？${x[2]}</span>`).join('')).join('');
+    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}</span>` : `<span class="g hint">${x[2] ? '？' + x[2] : '？？？'}</span>`).join('')).join('');
 }
 function showEnding(){
   const e = ENDINGS[s.ending];

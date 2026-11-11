@@ -745,7 +745,8 @@ function leaveMenu(kind){
   if(s.leaveKind==='fired' && !s.flags.arb) o.unshift({t:'申请劳动仲裁', sub:'赌一把 2N 赔偿', f:()=>{ s.flags.arb = true; if(chance(.5)){ const v = r1(curPay()/13*(Math.floor(s.compQ/4)+1)*2*.8); s.money = r1(s.money+v); s.st.arb = true; L(`半年后，裁决书下来了：违法解除，赔偿 2N，到手约 ${v} 万。你把裁决书拍照发到了前同事群里。`, fx({san:10}), 'good milestone'); } else L('仲裁委认为公司程序合规，你白折腾了半年。', fx({san:-8})); s.leaveKind='quit'; leaveMenu('again'); }});
   if(s.hunts >= 3) o.push({t:'先开网约车过渡', sub:'灵活就业两三年', f:()=>startChapter('gig')});
   if(s.age <= 42 && !s.flags.soe) o.push({t:'去国企科技子公司', sub:'工资减半，稳定', f:()=>{ s.flags.soe = true; if(chance(.45 + (s.edu.top||s.edu.good ? .15 : 0))) startChapter('soe'); else { L('国企的 HR 说：“我们更看重第一学历和年龄。”', fx({san:-4}), 'warn'); leaveMenu('again'); } }});
-  if((s.edu.top || s.edu.good || s.edu.genius) && s.age <= 33) o.push({t:'回学校读博', sub:'三到四年', f:()=>startChapter('phd')});
+  // 读博需要硕士学历（或名校背景申请海外博士），辍学和普通本科不行
+  if((s.edu.master || s.edu.top) && s.age <= 35) o.push({t:'回学校读博', sub:'三到四年 · 需要硕士或名校背景', f:()=>startChapter('phd')});
   if(s.money >= 30) o.push({t:'开一家咖啡店', sub:'投入 30 万', f:()=>startChapter('shop')});
   o.push({t:'做“前大厂员工”博主', f:()=>startChapter('blogger')});
   if(s.net >= 55 && s.abi >= 65 && s.money >= 60) o.push({t:'拉几个前同事创业', f:()=>startChapter('startup')});

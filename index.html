@@ -1252,7 +1252,7 @@ const EVENTS_BASE = [
    {t:'刷手机到三点', f:()=>L('周一早上你在地铁上睡着了，坐过了站。', fx({hp:-3,san:-2}))}])},
  {w:()=>s.age>=29?2:0, cd:10, f:()=>L(pick(['颈椎开始疼了。你买了一个三百块的人体工学枕。','你发现自己爬三层楼梯会喘。','眼科医生说你的干眼症“很典型”。']), fx({hp:-3}))},
  {w:()=>s.pets.length<2?1.5:0, once:1, f:()=>ask('一只猫','小区楼下有只橘猫跟了你三天。',[
-   {t:'带回家', f:()=>{ const n = adoptPet('猫'); L(`你把它抱回了家，取名「${n}」。`, fx({san:8,money:-.5}),'good'); }},
+   {t:'带回家', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你把它抱回了家，取名「${n}」。`, fx({san:8,money:-.5}),'good'); })},
    {t:'喂点吃的就走', f:()=>L('第四天它不见了。你有点难过。', fx({san:-1}))}])},
  {w:()=>(!s.flags.house && s.age>=24)?1.5:0, cd:12, f:()=>L('房东要卖房，给了你一个月搬家。', fx({san:-4,money:-1}))},
  {w:()=>(s.age>=30 && !s.fam.money)?1.5:0, cd:12, f:()=>L('爸妈打电话：“回来吧，考个编制，离家近。”', fx({san:-2}))},
@@ -1846,7 +1846,10 @@ function hobbyTick(){
 }
 
 /* ============ 宠物 ============ */
-const PETN = {'猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐','奶茶','咪咪','雪球','花卷','小鱼干'], '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐','馒头','来福','阿黄','饺子','栗子']};
+const PETN = {
+  '猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐','奶茶','咪咪','雪球','花卷','小鱼干','麻薯','奥利奥','三花','大橘','团子','糯米','咖啡','芒果','豆花','拿铁','嘟嘟','十一','加班','KPI','周五','摸鱼','五险','一金'],
+  '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐','馒头','来福','阿黄','饺子','栗子','元宝','可颂','黑豆','阿福','包子','板栗','乐乐','毛毛','发财','点赞','回本','周末','年终奖','涨薪','上岸','OKR','需求','绩效']};
+let PET_NAME_INPUT = null; // 平台提供“自己起名”的输入框：cb => cb(名字)；没有就只给候选名字
 function birthEvent(){
   const f = s.gender === 'f';
   s.flags.preg = false; s.flags.kid = true;
@@ -1874,15 +1877,25 @@ function petMenu(){
     o.push({t:`带「${p.name}」去体检洗澡`, sub:'花点钱，它会更健康', f:()=>{ p.bond = (p.bond||0) + 1; p.next = s.turn + 3; L(`${p.name}洗完澡香喷喷的，医生说它很健康。`, fx({san:3,money:-.8}), 'pet'); }});
   }
   {
-    o.push({t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>{ const n = adoptPet('猫'); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); }});
-    o.push({t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>{ const n = adoptPet('狗'); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); }});
+    o.push({t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); })});
+    o.push({t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>namePet('狗', n => { adoptPet('狗', n); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); })});
   }
   o.push({t:'算了', f:()=>{}});
   ask(s.pets.length ? '你的宠物' : '养宠物', s.pets.length ? `${s.pets.map(p=>p.name).join('和')}正看着你。` : '你想养点什么？', o);
 }
-function adoptPet(type){
+function petNameOk(n){ return String(n || '').replace(/[<>&"'`\\\s]/g, '').slice(0, 8); }
+function namePet(type, done){
+  const unused = PETN[type].filter(n => !s.pets.some(p => p.name === n));
+  const pool = unused.length >= 3 ? unused : PETN[type].map(n => n + '二世').filter(n => !s.pets.some(p => p.name === n));
+  const sugg = []; while(sugg.length < 3 && sugg.length < pool.length){ const n = pick(pool); if(!sugg.includes(n)) sugg.push(n); }
+  const o = sugg.map(n => ({t:`叫它「${n}」`, f:()=>done(n)}));
+  if(PET_NAME_INPUT) o.push({t:'自己起名', sub:'最多 8 个字', f:()=>PET_NAME_INPUT(v => { const n = petNameOk(v); done(n && !s.pets.some(p => p.name === n) ? n : sugg[0]); })});
+  o.push({t:'换一批名字', f:()=>namePet(type, done)});
+  ask('给它起个名字', `这只${type}歪着头看着你。`, o);
+}
+function adoptPet(type, given){
   const names = PETN[type].filter(n => !s.pets.some(p=>p.name===n));
-  let name = names.length ? pick(names) : pick(PETN[type]) + '二世';
+  let name = given || (names.length ? pick(names) : pick(PETN[type]) + '二世');
   while(s.pets.some(p => p.name === name)) name += '二世';
   s.pets.push({type, name, since:s.turn, next:s.turn+rnd(2,3)});
   return name;
@@ -2940,6 +2953,9 @@ function renderGallery(){
     showRewarded('hint').then(ok => { if(ok){ unlockHint(el.dataset.hk); renderGallery(); } else alert('暂时没有可看的广告，稍后再试。'); });
   });
 }
+/* WEB-PETNAME-START 网页版：用浏览器输入框给宠物起名 */
+if(HAS_DOM) PET_NAME_INPUT = cb => { let v = null; try{ v = window.prompt('给它起个名字（最多 8 个字）', ''); }catch(err){} cb(v); };
+/* WEB-PETNAME-END */
 /* WEB-ADS-START 网页广告：填入 AdSense 发布商 ID 并获准使用 H5 Games Ads 后生效；留空则不加载任何广告代码 */
 const ADSENSE_CLIENT = '';   // 例如 'ca-pub-1234567890123456'
 const ADSENSE_TEST = false;  // 调试时设为 true，会请求测试广告

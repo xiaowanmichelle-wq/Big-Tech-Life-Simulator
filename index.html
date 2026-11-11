@@ -138,6 +138,29 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .mate .his{font-size:12px;color:var(--mute);margin-top:2px}
 .ln.cohort .x{color:#5a5248}
 .ln.cohort .x::before{content:"同期入职 · ";color:var(--mute);font-size:12px}
+#recap{position:fixed;inset:0;background:var(--paper);z-index:24;overflow:auto}
+.rc{max-width:620px;margin:0 auto;padding:calc(26px + env(safe-area-inset-top)) 18px 0}
+.rc .rtop{display:flex;justify-content:space-between;align-items:center}
+.rc h2{font-family:var(--serif);font-weight:900;font-size:30px;margin:0}
+.rc .rsub{color:var(--mute);font-size:13px;margin:4px 0 18px;border-bottom:3px double var(--ink);padding-bottom:12px}
+.tl{position:relative;margin-left:8px;padding-left:22px;border-left:1.5px solid var(--line)}
+.ti{position:relative;padding:7px 0 9px;opacity:0;transform:translateY(6px);animation:rin .5s ease forwards;animation-delay:var(--d)}
+.ti::before{content:"";position:absolute;left:-28px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--paper);border:1.5px solid var(--ink)}
+.ti .yr{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.ti .tx{font-size:15px;line-height:1.6}
+.ti .ic{margin-right:6px}
+.ti.end .tx{font-family:var(--serif);font-weight:900;font-size:22px}
+.ti.end::before{background:var(--red);border-color:var(--red)}
+.noanim .ti,.noanim .rend{animation:none;opacity:1;transform:none}
+@keyframes rin{to{opacity:1;transform:none}}
+.rend{margin:18px 0 8px;padding:16px;border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);background:#fbf9f4;opacity:0;animation:rin .6s ease forwards;animation-delay:var(--d)}
+.rend .pct{font-family:var(--serif);font-size:15px}.rend .pct b{font-size:24px}
+.rend .q{font-family:var(--serif);font-size:17px;text-align:center;margin-top:10px}
+.rbar{position:sticky;bottom:0;background:var(--paper);border-top:1.5px solid var(--ink);margin:18px -18px 0;padding:12px 18px calc(12px + env(safe-area-inset-bottom))}
+.rbar .btns .btn{flex:1}
+.rlinks{display:flex;justify-content:center;gap:18px;margin-top:8px;font-size:12.5px}
+.rlinks a{color:var(--mute);text-decoration:underline;cursor:pointer}
+.endbar{display:flex;gap:10px;width:100%}.endbar .btn{flex:1}
 #share{position:fixed;inset:0;background:rgba(35,32,27,.75);z-index:30;overflow:auto;padding:24px 16px;text-align:center}
 #share img{max-width:min(420px,100%);height:auto;box-shadow:6px 6px 0 rgba(0,0,0,.35);display:block;margin:0 auto}
 #share .tip{color:#eee;font-size:13px;margin:12px 0}
@@ -187,6 +210,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 </div>
 <div id="ending" hidden></div>
 <div id="share" hidden></div>
+<div id="recap" hidden></div>
 <div id="cohort" hidden></div>
 
 <script>
@@ -428,7 +452,7 @@ function fx(o){
 }
 function tlabel(){ return `${s.year}·Q${s.q}`; }
 function log(t, text, cls='', sub=''){
-  s.log.push({t,text,cls,sub});
+  s.log.push({t,text,cls,sub,y:s.year,q:s.q,age:s.age});
   if(!HAS_DOM) return;
   const d = document.createElement('div');
   d.className = 'ln ' + cls;
@@ -1609,6 +1633,81 @@ function end(k){
   if(HAS_DOM) showEnding();
 }
 
+/* ============ 人生回放：从日志里挑出高光时刻 ============ */
+const HL_RULES = [
+  [l => l.t === '结局', '🏁'],
+  [l => l.t === '入职', '🏢'],
+  [l => /^晋升成功/.test(l.text), '📈'],
+  [l => /外包转正成功/.test(l.text), '🎫'],
+  [l => /^【绩效】/.test(l.text) && /顶格绩效/.test(l.sub || ''), '🌟'],
+  [l => /^【绩效】/.test(l.text) && /\bbad\b/.test(l.cls), '📉'],
+  [l => /15 分钟的会议/.test(l.text), '💼'],
+  [l => /发出了辞职信/.test(l.text), '🚪'],
+  [l => /PIP 没过|PIP 过了/.test(l.text), '⚠️'],
+  [l => /入职第一天，你在工位旁认识了/.test(l.text), '🤝'],
+  [l => /新公司的第一周/.test(l.text), '🤝'],
+  [l => /多肉留给了你/.test(l.text), '👋'],
+  [l => /撞见了/.test(l.text), '🤝'],
+  [l => /一号工程/.test(l.text) && /good/.test(l.cls), '🚀'],
+  [l => /你拿到了一份不小的股份/.test(l.text), '🚀'],
+  [l => /婚礼/.test(l.text), '💍'],
+  [l => /30 年房贷/.test(l.text), '🏠'],
+  [l => /孩子出生/.test(l.text), '👶'],
+  [l => /取名「/.test(l.text), '🐾'],
+  [l => /^解锁成就/.test(l.text), '🏅'],
+  [l => /^【投资年报】/.test(l.text) && +(((l.sub || '').match(/(盈利|亏损) ([\d.]+)/) || [])[2] || 0) >= 10, '📊'],
+  [l => /bad/.test(l.cls) && /杀猪盘|血本无归|群解散|注销了|再也没回过/.test(l.text), '💸'],
+  [l => /35 岁生日/.test(l.text), '🎂'],
+  [l => /上市了/.test(l.text) && /good/.test(l.cls), '🔔'],
+  [l => /副业赚钱了|一等奖|摇号中了/.test(l.text), '🍀'],
+  [l => /^晋升成功/.test(l.text) === false && /进了高管层/.test(l.text), '👔'],
+];
+// 把日志压缩成一句话的闪回
+function hlText(ic, l){
+  const t = l.text; let m;
+  if(ic === '🏢' && (m = t.match(/你加入了(.+?)，(?:身份是外包驻场|职级 ([^（，]+)).*?「(.+?)」/))) return `加入${m[1]}，${m[2] ? m[2].trim() : '外包驻场'}，「${m[3]}」业务`;
+  if(ic === '🤝'){
+    if(m = t.match(/认识了同期的(.+?)。.是个(.+?)，/)) return `认识了职场发小${m[1]}（${m[2]}）`;
+    if(m = t.match(/第一周，(.+?)主动.*?是个(.+?)，/)) return `认识了饭搭子${m[1]}（${m[2]}）`;
+    if(m = t.match(/撞见了(.+?)——/)) return `和${m[1]}在新公司重逢`;
+  }
+  if(ic === '💼' && (m = t.match(/理由是“(.+?)”/))) return `被裁员，理由是“${m[1]}”`;
+  if(ic === '🚪') return '裸辞了，走出大楼时阳光很好';
+  if(ic === '💸'){
+    if(/杀猪盘/.test(t)){ const a = t.match(/追加到了 ([\d.]+) 万/); return a ? `遇到杀猪盘，被骗 ${a[1]} 万` : '遇到杀猪盘，被骗了一大笔'; }
+    if(/群解散/.test(t)) return '跟投资群的“老师”买股票，被骗了';
+    if(/再也没回过/.test(t)) return '老同学的理财产品爆雷了';
+    if(/注销了/.test(t)) return '买的“原始股”打了水漂';
+    if(/血本无归/.test(t)) return '私募产品暴雷，血本无归';
+  }
+  if(ic === '🐾' && (m = t.match(/取名「(.+?)」/))) return `${/狗/.test(t) ? '养了一只狗' : '养了一只猫'}，取名「${m[1]}」`;
+  if(ic === '👋' && (m = t.match(/^你的(.+?)(去了.+?|离开了大厂，.+?)。/))) return `${m[1]}${m[2]}`;
+  if(ic === '🚀' && /股份/.test(t)) return '跟着业务分拆出去，拿到了股份';
+  if(ic === '🚀' && (m = t.match(/「(.+?)」突然爆了/))) return `「${m[1]}」突然爆了，成了一号工程`;
+  return t.split('。')[0];
+}
+const HL_CAP = {'🌟':3, '📊':3, '🏅':5, '📉':3, '🐾':2, '🤝':4};
+function lifeHighlights(){
+  const out = [], cnt = {};
+  for(const l of s.log){
+    if(l.y == null || (l.cls||'').includes('div')) continue;
+    for(const [f, ic] of HL_RULES){
+      if(!f(l)) continue;
+      cnt[ic] = (cnt[ic]||0) + 1;
+      if(HL_CAP[ic] && cnt[ic] > HL_CAP[ic]) break;
+      let t = l.text;
+      if(ic === '🏁') t = '结局：' + ENDINGS[s.ending].n;
+      else if(ic === '📊') t = `这一年投资${((l.sub||'').match(/全年(盈利|亏损) [\d.]+ 万/) || [''])[0].replace('全年','')}`;
+      else if(ic === '🌟' || ic === '📉') t = t.replace(/^【绩效】/, ic === '🌟' ? '顶格绩效 · ' : '最低绩效 · ');
+      else t = hlText(ic, l);
+      if(t.length > 66) t = t.slice(0, 64) + '…';
+      out.push({y:l.y, age:l.age, icon:ic, text:t, end: ic === '🏁'});
+      break;
+    }
+  }
+  return out;
+}
+
 /* ============ 渲染 ============ */
 function $(id){ return document.getElementById(id); }
 function render(){
@@ -1627,6 +1726,13 @@ function render(){
   $('actsL').innerHTML = row('l','生活',s.actedL);
   document.querySelectorAll('#actsW .act, #actsL .act').forEach(x => x.onclick = () => doAction(+x.dataset.i));
   $('next').disabled = !!(s.queue.length || s.over || s.unemployed);
+  $('next').hidden = !!s.over;
+  if(s.over){
+    $('strat').innerHTML = `<span class="lab">结局</span><b style="font-family:var(--serif)">${ENDINGS[s.ending].n}</b><span class="grades">超过 ${s.pct}% 的打工人</span>`;
+    $('actsW').innerHTML = `<div class="endbar"><button class="btn primary" id="dRecap">回看这一生</button><button class="btn" id="dAgain">重新投胎</button></div>`;
+    $('actsL').innerHTML = '';
+    $('dRecap').onclick = showRecap; $('dAgain').onclick = restartGame;
+  }
   if(!$('game').hidden){
     $('dock').hidden = !!(s.queue.length && !s.over);
     requestAnimationFrame(() => { $('game').style.paddingBottom = ($('dock').hidden ? 40 : $('dock').offsetHeight + 24) + 'px'; });
@@ -1674,13 +1780,47 @@ function showEnding(){
     ${s.friends.length?`<div class="sum" style="font-size:13px;margin-top:10px">你的${s.friends[0].kind}：<b>${s.friends[0].p.name}</b>，现在${s.friends[0].p.out?s.friends[0].p.out:`在${s.friends[0].p.comp.n}`}。</div>`:''}
     <div class="sum" style="font-size:13px;color:var(--mute);margin-top:10px">${cohortSummary()} <button class="mini" id="cohortEnd">看看他们</button></div>
     <div class="quote">“${s.quote}”</div>
-    <div class="btns"><button class="btn primary" id="sharebtn">生成分享卡</button><button class="btn" id="again">再活一次</button><button class="btn" id="seelog">看看这一生</button></div></div>`;
+    <div class="btns"><button class="btn primary" id="recapbtn">回看这一生</button><button class="btn" id="sharebtn">生成分享卡</button><button class="btn" id="again">重新投胎</button></div></div>`;
   $('sharebtn').onclick = showShare;
   $('cohortEnd').onclick = showCohort;
   $('ending').hidden = false;
-  $('again').onclick = () => { $('ending').hidden = true; $('game').hidden = true; $('dock').hidden = true; $('start').hidden = false; showRoll(); window.scrollTo(0,0); };
-  $('seelog').onclick = () => { $('ending').hidden = true; };
+  $('again').onclick = restartGame;
+  $('recapbtn').onclick = showRecap;
   render();
+}
+function restartGame(){
+  ['ending','recap','share','cohort'].forEach(id => { const el = $(id); if(el) el.hidden = true; });
+  $('game').hidden = true; $('dock').hidden = true; $('start').hidden = false;
+  showRoll(); window.scrollTo(0,0);
+}
+function showRecap(){
+  const e = ENDINGS[s.ending], hl = lifeHighlights();
+  const step = Math.min(260, Math.max(90, 5200 / Math.max(1, hl.length)));
+  const cls = {good:'var(--green)',bad:'var(--red)',mid:'var(--blue)',hidden:'var(--amber)'}[e.t];
+  let lastY = null;
+  const items = hl.map((x,i) => {
+    const yr = x.y !== lastY ? `${x.y} 年 · ${x.age} 岁` : `${x.age} 岁`; lastY = x.y;
+    return `<div class="ti ${x.end?'end':''}" style="--d:${(i*step/1000).toFixed(2)}s"><div class="yr">${yr}</div><div class="tx"${x.end?` style="color:${cls}"`:''}><span class="ic">${x.icon}</span>${x.text}</div></div>`;
+  }).join('');
+  $('recap').innerHTML = `<div class="rc" id="rc">
+    <div class="rtop"><h2>这一生</h2><button class="mini" id="rskip">跳过动画</button></div>
+    <div class="rsub">${s.startAge} 岁入行 → ${s.age} 岁 · ${Math.floor(s.st.q/4)} 年 · ${s.st.companies} 家公司 · 晋升 ${s.st.promos} 次 · 身家 ${r1(s.money+invTotal())} 万</div>
+    <div class="tl">${items}</div>
+    <div class="rend" style="--d:${((hl.length*step+300)/1000).toFixed(2)}s">
+      <div class="pct">你的人生超过了 <b style="color:${cls}">${s.pct}%</b> 的打工人</div>
+      <div style="margin-top:8px">${titles().map(t=>`<span class="chip">${t}</span>`).join('')}</div>
+      <div class="q">“${s.quote}”</div>
+    </div>
+    <div class="rbar">
+      <div class="btns"><button class="btn primary" id="rshare">生成分享卡</button><button class="btn" id="ragain">重新投胎</button></div>
+      <div class="rlinks"><a id="rlog">查看完整日志</a><a id="rback">返回结局</a></div>
+    </div></div>`;
+  $('recap').hidden = false; $('recap').scrollTop = 0; $('ending').hidden = true;
+  $('rskip').onclick = () => { $('rc').classList.add('noanim'); };
+  $('rshare').onclick = showShare;
+  $('ragain').onclick = restartGame;
+  $('rlog').onclick = () => { $('recap').hidden = true; render(); };
+  $('rback').onclick = () => { $('recap').hidden = true; $('ending').hidden = false; };
 }
 function shareText(){
   const e = ENDINGS[s.ending];

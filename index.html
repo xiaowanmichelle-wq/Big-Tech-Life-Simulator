@@ -2710,10 +2710,9 @@ async function showShare(){
   y += 70; x.fillStyle = ink; x.fillRect(P, y-30, W-2*P, 1);
   x.font = `700 28px ${serif}`; x.textAlign = 'center';
   wrap(x, `“${s.quote}”`, W-2*P-40).forEach(l => { y += 14; x.fillText(l, W/2, y+14); y += 30; });
-  const H2 = y + 170;
-  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-118);
-  x.font = `700 26px ${serif}`; x.fillStyle = ink; x.fillText('dachang.life', W/2, H2-84);
-  x.font = `13px ${sans}`; x.fillStyle = mute; x.fillText('微信小游戏搜「工位浮生记」', W/2, H2-58); x.textAlign = 'left';
+  const H2 = y + 150;
+  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-100);
+  x.font = `700 26px ${serif}`; x.fillStyle = ink; x.fillText('dachang.life', W/2, H2-66); x.textAlign = 'left';
   const out = document.createElement('canvas'); out.width = W*2; out.height = H2*2;
   const o = out.getContext('2d'); o.drawImage(cv, 0, 0, W*2, H2*2, 0, 0, W*2, H2*2); o.scale(2,2);
   o.strokeStyle = ink; o.lineWidth = 3; o.strokeRect(24,24,W-48,H2-48); o.lineWidth = 1; o.strokeRect(32,32,W-64,H2-64);

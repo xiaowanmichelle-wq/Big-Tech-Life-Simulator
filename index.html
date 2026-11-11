@@ -1636,6 +1636,21 @@ const QUOTES = {
   bad:   ['大厂生存不过一场游戏，放轻松。','工牌会失效，但你的人生不会。','绩效只是一个字母，你是一个完整的人。','公司不会记得你加过的班，但你的家人会。','先照顾好自己，再去改变世界。'],
   hidden:['大厂生存不过一场游戏，放轻松。','人生总有意外，有时候意外也挺好。'],
 };
+// 第二人生称号：[称号, 提示, 条件(c, tier)]
+const CH_TITLES = {
+  civil:[['上岸','考公上岸',c=>c.data.in], ['笔杆子','在单位里写出了名堂',(c,t)=>t==='good']],
+  shop:[['咖啡店主','开过一家咖啡店',()=>true], ['连锁老板','咖啡店开出了分店',(c,t)=>t==='good']],
+  blogger:[['前大厂博主','做过博主',()=>true], ['五十万粉丝','粉丝涨到五十万',c=>c.data.fans>=50]],
+  startup:[['创业者','拉着前同事创过业',()=>true], ['对赌人生','签过对赌条款',c=>c.data.bet], ['B 轮掌舵人','公司拿到 B 轮',(c,t)=>t==='good']],
+  home:[['回乡青年','回了老家',()=>true], ['小城院子','在老家过上惬意日子',(c,t)=>t==='good']],
+  soe:[['国企人','去了国企',()=>true], ['国企一把手','在国企当上负责人',(c,t)=>t==='good']],
+  phd:[['博士','读博毕业',(c,t)=>t!=='bad'], ['顶会作者','中过一篇顶会',c=>c.data.top]],
+  gig:[['老司机','跑过网约车',()=>true], ['便利店老板','跑车攒钱开了店',c=>c.data.own]],
+  rest:[['间隔年','给自己放过一个长假',()=>true], ['手艺人','休息时学会一门手艺',(c,t)=>c.data.craft && t==='good']],
+  farm:[['新农人','回乡种过地',()=>true], ['合作社带头人','带着乡亲们一起干',c=>c.data.coop]],
+  fish:[['大厂船长','有了自己的渔船',c=>c.data.boat], ['渔家乐老板','开了一家火爆的渔家乐',c=>c.data.inn]],
+  nomad:[['数字游民','带着电脑去旅居',()=>true], ['地球是我的工位','旅居过 3 个地方',c=>c.data.places && c.data.places.length>=3]],
+};
 // 称号图鉴：[分类, 称号, 解锁提示]
 function titleDex(){
   const d = [
@@ -1648,6 +1663,7 @@ function titleDex(){
   ];
   SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
   TRAVEL_ACH.forEach(a => d.push(['旅行', a.n, {t5:'去过 5 个地方', t10:'去过 10 个地方', cn8:'去过 8 个国内城市', ab5:'去过 5 个国家', all:'所有地方都去过'}[a.k]]));
+  Object.values(CH_TITLES).forEach(a => a.forEach(x => d.push(['第二人生', x[0], x[1]])));
   RARES.forEach(r => d.push(['稀有身份', r.n, '投胎时极小概率抽到']));
   return d;
 }
@@ -1672,6 +1688,8 @@ function titles(){
   for(const a of TRAVEL_ACH) if((s.ach||[]).includes(a.k)) t.push(a.n);
   for(const a of s.sAch) t.push(a);
   if(s.st.arb) t.push('仲裁赢家');
+  const c = s.chapter;
+  if(c && CH_TITLES[c.k] && s.over && (s.ending||'').startsWith(c.k+'_')){ const tier = s.ending.split('_').pop(); for(const x of CH_TITLES[c.k]) if(x[2](c, tier)) t.push(x[0]); }
   if(s.rare) t.push(s.rare.n);
   if(!t.length) t.push('普通打工人');
   return t;
@@ -2078,7 +2096,7 @@ CH.farm = {
       ['不理会', '', c=>L('你继续干你的活。', fx({san:-1}))],
       ['请大家来地里尝鲜', '', c=>{ shift(c,4); L('大妈尝了一口，说：“这个好，给我留两斤。”', fx({san:4,net:3})); }]]},
     {t:'合作社', d:'村里想成立合作社，请你牵头。', o:[
-      ['牵头干', '', c=>{ shift(c,8); L('你把大厂那套项目管理用在了合作社上，十几户人家的收入都涨了。', fx({hp:-3,net:6}),'good milestone'); }],
+      ['牵头干', '', c=>{ c.data.coop = true; shift(c,8); L('你把大厂那套项目管理用在了合作社上，十几户人家的收入都涨了。', fx({hp:-3,net:6}),'good milestone'); }],
       ['只管好自己的地', '', c=>{}]]},
     {auto:c=>L('傍晚收工，你坐在田埂上看日落。手机没有信号，你一点也不慌。', fx({san:6}))},
   ],

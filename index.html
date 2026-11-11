@@ -59,6 +59,13 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .g.hint{border-style:dashed;font-size:12px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
 .lifebtn{width:100%;margin:2px 0 14px}
+.sting{font-family:var(--serif,"Noto Serif SC",serif);font-weight:700;font-size:18px;color:var(--red);margin:10px 0 4px;line-height:1.5}
+.persona{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:baseline}
+.persona small{grid-column:1/3;color:var(--mute);font-size:12px}
+.persona b{font-size:20px;font-family:"Noto Serif SC",serif}
+.persona span{font-size:13px;color:var(--mute)}
+.gallery .rp{margin-left:5px;color:var(--mute);font-size:10px}
+.rtitle{font-size:12px;color:var(--mute);margin:4px 0 8px}
 .chal{border:1.5px solid var(--red);color:var(--ink);padding:10px 12px;margin:0 0 14px;font-size:14px;line-height:1.6;background:#fbf3ef}
 .chal b{color:var(--red)}
 #recap .life{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;cursor:pointer;background:var(--paper)}
@@ -201,6 +208,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
       <div class="sub">你是数百万互联网打工人中的一个 · 从入职那天开始，按季度活下去</div>
     </div>
     <div class="chal" id="chal" hidden></div>
+    <div class="chal" id="d11" hidden><b>限时 · 双十一</b>（11 月 1 日 – 15 日）<br>本期新增大促作战室、凑满减、光棍节联谊等限时事件，还有两个限定称号。</div>
     <div class="odds" id="odds"></div>
     <div class="card" id="rollcard"></div>
     <div id="livesbox"></div>
@@ -426,6 +434,23 @@ function getChallenge(){ return CHAL; }
 function clearChallenge(){ CHAL = null; }
 function challengeQuery(){ return `c=${s.rollCode}&e=${s.ending}`; }
 const SITE = 'https://dachang.life';
+// 限时活动：跟着现实日期开放，游戏里在对应季度触发
+const FESTS = [
+  {k:'spring', n:'春节', from:[1,15], to:[2,28], d:'回家过年被盘问、发年终奖', range:'1 月 15 日 – 2 月 28 日'},
+  {k:'jump', n:'金三银四', from:[3,1], to:[4,30], d:'猎头电话、拿 offer 谈涨薪', range:'3 月 1 日 – 4 月 30 日'},
+  {k:'618', n:'618', from:[6,1], to:[6,20], d:'年中大促作战室、凑满减', range:'6 月 1 日 – 20 日'},
+  {k:'grad', n:'毕业季', from:[6,21], to:[7,31], d:'带应届新人、回母校宣讲', range:'6 月 21 日 – 7 月 31 日'},
+  {k:'d11', n:'双十一', from:[11,1], to:[11,15], d:'大促作战室、凑满减、光棍节联谊', range:'11 月 1 日 – 15 日'},
+];
+let FORCE_FEST = null; // 测试用：强制开启某个活动
+function curFest(){
+  if(FORCE_FEST) return FESTS.find(f => f.k === FORCE_FEST) || null;
+  try{ const d = new Date(), v = (d.getMonth()+1)*100 + d.getDate(); return FESTS.find(f => v >= f.from[0]*100+f.from[1] && v <= f.to[0]*100+f.to[1]) || null; }catch(err){ return null; }
+}
+function fest(k){ const f = curFest(); return !!f && f.k === k; }
+function isD11(){ return fest('d11'); }
+function bigSale(){ return (fest('d11') && s.q === 4) || (fest('618') && s.q === 2); }
+function isEcom(){ return (typeof ECOM !== 'undefined' && ECOM.includes(s.comp.id)) || /电商/.test(s.comp.n) || /电商|淘宝|零售|物流|买菜/.test((s.biz[s.bizIdx]||{}).n || ''); }
 function roll(){
   let odds = 1;
   const ep = (list,x,wf=y=>y.w) => wf(x) / list.reduce((a,y)=>a+wf(y),0);
@@ -1176,6 +1201,40 @@ const EVENTS_BASE = [
  {w:()=>s.inv.pe>0?1.5:0, cd:16, f:()=>{ if(chance(.4)){ const v = s.inv.pe; s.inv.pe = 0; s.st.scam = (s.st.scam||0)+1; L(`你买的那只私募产品暴雷了，管理人失联，${v} 万血本无归。`, fx({san:-10}),'bad'); } else L('一家知名私募暴雷的新闻刷屏了。你连夜查了查自己买的产品，还好没事。', fx({san:-3})); }},
  {w:()=>invTotal()>0?1.5:0, cd:8, f:()=>L(pick(['茶水间里所有人都在聊股票，有人说“这波不上车就晚了”。','同事给你看了他的持仓截图，今年翻了一倍。','你在工位上偷偷看盘，被老板看到了。']), fx({san:-1}))},
 
+ /* ---------- 限时：双十一（现实时间 11 月 1 日–15 日开放，游戏里每年第四季度触发） ---------- */
+ {w:()=>(bigSale() && !s.chapter)?(isEcom()?4:1.5):0, cd:3, f:()=>{
+   const sale = s.q === 4 ? '双十一' : '618';
+   if(isEcom()) ask(`${sale}作战室`,'大促倒计时七天。作战室里堆满了泡面和功能饮料，老板说：“今年 GMV 必须再涨 30%。”',[
+     {t:'主动请缨守零点', f:()=>{ s.flags.d11night = true; if(chance(.7)){ L('零点一过，大屏上的数字疯狂跳动，系统稳稳扛住了。老板在群里发了一个大红包。', fx({boss:8,qmod:6,hp:-6,san:2}),'good'); } else { s.blame++; L('零点十二分，下单接口挂了九十秒。复盘会上，所有人都在看你。', fx({boss:-6,qmod:-6,hp:-6,san:-8}),'bad'); } }},
+     {t:'做好自己那块，按时下班', f:()=>L('你把预案写好，十点半就走了。第二天早上看到群里六百条消息。', fx({qmod:1,san:2}))}]);
+   else L(pick(['隔壁电商大厂的同学在朋友圈晒作战室：凌晨三点，泡面和大屏。你默默点了个赞。',`${sale}前一周，公司楼下的快递柜被塞爆了，行政发邮件提醒大家“请及时取件”。`,'你们组的群里在拼单凑满减，有人一口气算了二十分钟。']), fx({san:1}));
+ }},
+ {w:()=>bigSale()?2.5:0, cd:4, f:()=>ask('凑满减','你的购物车里躺着三千多块的东西。为了凑满减，你又加了一包用不上的湿巾。',[
+   {t:'清空购物车！', f:()=>{ s.flags.d11buy = (s.flags.d11buy||0)+1; L('付款成功的那一刻，你觉得这一年的委屈都值了。', fx({money:-.8,san:5})); }},
+   {t:'付定金，等尾款', f:()=>{ s.flags.wk = true; L(chance(.5) ? '你定好了尾款闹钟，零点准时付款，成为一名光荣的尾款人。' : '你把付尾款这件事忘了，第二天早上发现定金没了。', fx({money:-.4,san:2})); }},
+   {t:'一分不花', f:()=>L('你看着大家晒单，打开了理财 App。余额宝的收益是 3 块 2。', fx({san:-1}))}])},
+ {w:()=>(isD11() && s.q===4 && !s.flags.married && s.age>=24)?1.2:0, cd:8, f:()=>ask('光棍节','11 月 11 日也是光棍节。公司工会组织了一场跨部门联谊。',[
+   {t:'去看看', f:()=>{ if(chance(.3)){ s.flags.d11love = true; L('你和隔壁部门的一个人聊得很投缘，散场后又一起吃了宵夜。', fx({san:8,net:3}),'good'); } else L('你吃了很多小龙虾，加了五个微信，后来都没聊过。', fx({san:2,net:2})); }},
+   {t:'在工位上加班', f:()=>L('你一个人在工位上过了光棍节，楼下的外卖小哥比你还忙。', fx({san:-2}))}])},
+
+ /* ---------- 限时：春节 ---------- */
+ {w:()=>(fest('spring') && s.q===1 && !s.chapter)?3:0, cd:4, f:()=>ask('回家过年','年夜饭桌上，二姨问：“在大厂一个月挣多少？什么时候结婚？”',[
+   {t:'如实报工资', f:()=>L('第二天，你的工资出现在了家族群里，后面跟着一串“厉害”。三个表弟来问你能不能内推。', fx({san:-3,net:2}))},
+   {t:'“还行吧，混口饭吃”', f:()=>L('二姨点点头，转头去问表哥了。你松了一口气，夹了一块鱼。', fx({san:2}))},
+   {t:'今年值班，不回了', f:()=>{ s.flags.cny = true; L('除夕夜你在工位上吃饺子，监控大屏上的曲线很平稳。你妈发来一段年夜饭的视频。', fx({san:-4,boss:4,money:r1(curPay()*.01)})); }}])},
+ {w:()=>(fest('spring') && s.q===1 && !s.chapter && !s.out)?3:0, cd:4, f:()=>{ const pv = lastPv(); const m = pv >= .8 ? 6 : pv >= .55 ? 3 : pv >= .3 ? 1.5 : 0; const v = r1(curPay()*m/12*.5);
+   if(m >= 6) s.flags.bonus = true;
+   L(m ? `年终奖发了，${m} 个月，到手 ${v} 万。${m >= 6 ? '你在洗手间里偷偷笑出了声。' : m >= 3 ? '不多不少，够还一部分房贷。' : '你算了算，刚好够买一张回家的机票。'}` : '年终奖发了：零个月。HR 说“今年整体不太好”。', fx({money:v, san: m >= 3 ? 4 : -4}), m >= 6 ? 'good' : m ? '' : 'bad'); }},
+ /* ---------- 限时：金三银四 ---------- */
+ {w:()=>(fest('jump') && (s.q===1||s.q===2) && !s.chapter && !s.out)?3:0, cd:4, f:()=>ask('金三银四','猎头连打了三个电话：“有个岗位，涨薪 40%，要不要聊聊？”',[
+   {t:'拿 offer 找老板谈涨薪', f:()=>{ if(chance(clamp((s.abi-40)/50, .2, .75))){ s.mult = r1(s.mult*1.15); s.flags.raise = true; L('你拿着 offer 去找老板。老板沉默了十秒，说：“给你涨 15%，别走。”', fx({san:5,boss:-3}),'good'); } else L('面了五轮，最后一轮 HR 说：“HC 冻结了。”', fx({san:-4})); }},
+   {t:'不动，先苟着', f:()=>L('你把猎头的微信备注改成了“以后再说”。', fx({san:1}))}])},
+ /* ---------- 限时：毕业季 ---------- */
+ {w:()=>(fest('grad') && s.q===3 && !s.chapter && !s.out)?3:0, cd:4, f:()=>ask('毕业季','组里来了三个应届生，老板指定你当 mentor。',[
+   {t:'认真带', f:()=>{ s.flags.mentor = true; L('你给他们写了一份入职指南，第一条是“不要在周五下午上线”。三个月后，他们都转正了。', fx({net:5,hp:-3,boss:3}),'good'); }},
+   {t:'让他们先看文档', f:()=>L('新人在群里问了二十个问题，你一个都没回。', fx({san:2,boss:-2}))}])},
+ {w:()=>(fest('grad') && s.q===3 && !s.chapter && !s.out)?1.5:0, cd:8, f:()=>L('你被派回母校做校招宣讲。台下的学弟学妹问：“大厂真的很卷吗？”你笑了笑，说：“来了就知道了。”', fx({net:3,san:2}))},
+
  /* ---------- A 股 ---------- */
  {w:()=>(mkt().ph==='bull' && s.money>=10)?2.5:0, cd:6, f:()=>{ const v = r1(s.money*.5); ask('牛市来了','大盘连涨了两个月。券商 App 开户排队，你妈打电话问你股票怎么买，电梯里的保安在聊半导体。',[
    {t:`上车！买 ${v} 万 A 股`, f:()=>{ s.money = r1(s.money-v); s.inv.stock = r1((s.inv.stock||0)+v); mkt().chase = 1; L('你下单的那一刻，心跳得比述职还快。', fx({san:3})); }},
@@ -1686,6 +1745,55 @@ const QUOTES = {
   bad:   ['大厂生存不过一场游戏，放轻松。','工牌会失效，但你的人生不会。','绩效只是一个字母，你是一个完整的人。','公司不会记得你加过的班，但你的家人会。','先照顾好自己，再去改变世界。'],
   hidden:['大厂生存不过一场游戏，放轻松。','人生总有意外，有时候意外也挺好。'],
 };
+/* ============ 职场人格 / 扎心一句 / 稀有度 ============ */
+// 职场人格：按这一生的行为打分，取最高分
+const PERSONAS = [
+  ['卷王型', '凌晨两点的工位，见过你最多的样子。', ()=>s.st.juan/Math.max(1,s.st.q)*120],
+  ['摸鱼大师型', '活干完了吗？干完了。真的吗？差不多。', ()=>s.st.moyuTot/Math.max(1,s.st.q)*130],
+  ['游牧型打工人', '你的简历比朋友圈更新得勤。', ()=>(s.st.companies-1)*26 + (s.st.transfers||0)*10],
+  ['自由灵魂型', '工位困不住你，世界才是你的办公室。', ()=>s.chapter && /^(farm|fish|nomad|rest|blogger|gig|shop)$/.test(s.chapter.k) ? 52 : 0],
+  ['体制向往型', '稳定，才是最大的福利。', ()=>s.chapter && /^(civil|soe|home)$/.test(s.chapter.k) ? 52 : 0],
+  ['学术回流型', '比起 OKR，你更想写一篇好论文。', ()=>s.chapter && s.chapter.k === 'phd' ? 55 : 0],
+  ['创业者人格', '永远在想“这事能不能做成一门生意”。', ()=>/^(startup_|angel|spinoff)/.test(s.ending) ? 85 : 0],
+  ['向上管理型', '老板的每一个眼神，你都读得懂。', ()=>(s.boss-50)*2.2],
+  ['人脉型', '公司里一半的人，你都请喝过咖啡。', ()=>(s.net-40)*1.8],
+  ['技术信仰型', '你相信代码不会说谎，PPT 会。', ()=>s.role && s.role.tech ? (s.abi-66)*2.6 + 8 : (s.abi-82)*2],
+  ['佛系型', '绩效是绩效，人生是人生。', ()=>(s.san-76)*2.4],
+  ['硬扛型', '撑到最后一刻的，总是你。', ()=>(42-Math.min(s.hp, s.san))*2.6],
+  ['普通打工人型', '千千万万个打工人里，最真实的那一个。', ()=>38],
+];
+function persona(){
+  let best = PERSONAS[PERSONAS.length-1], bv = -1e9;
+  for(const p of PERSONAS){ let v = 0; try{ v = p[2]() || 0; }catch(err){} if(v > bv){ bv = v; best = p; } }
+  return {n:best[0], d:best[1]};
+}
+function stingLine(){
+  const c = []; let blame = 0, low = 0;
+  for(const l of s.log){
+    if(l.age == null) continue; const t = l.text || '', a = l.age; let m;
+    if(m = t.match(/理由是“(.+?)”/)) c.push([9, `${a} 岁那年，你被裁员了，理由是“${m[1]}”。`]);
+    if(/事故责任人|背下了这口锅|锅还是|大家都是一个团队|审计还是找你谈话|签的是你的名字|所有人都在看你/.test(t)){ blame++; c.push([5+blame*1.5, `${a} 岁那年，你背了${blame >= 2 ? `第 ${blame} 口` : '一口'}锅。`]); }
+    if(/^【绩效】/.test(t) && /\bbad\b/.test(l.cls||'')){ low++; c.push([4+low*1.5, `${a} 岁那年，你拿了${low >= 2 ? `第 ${low} 个` : ''}最低绩效。`]); }
+    if(/杀猪盘|血本无归|群解散|注销了|再也没回过/.test(t) && /bad/.test(l.cls||'')) c.push([8, `${a} 岁那年，${hlText('💸', l)}。`]);
+    if(/PIP 没过/.test(t)) c.push([8, `${a} 岁那年，你的 PIP 没过。`]);
+    if(/35 岁生日/.test(t)) c.push([6, '35 岁生日那天，HR 系统里你的标签悄悄变了。']);
+    if(/零个月/.test(t)) c.push([7, `${a} 岁那年，你的年终奖是零个月。`]);
+  }
+  if((s.st.aLoss||0) >= 3) c.push([6.5, `你给 A 股做了 ${s.st.aLoss} 年贡献。`]);
+  if(s.hair < 40) c.push([5.5, `离开的时候，你的头发只剩 ${Math.round(s.hair)}。`]);
+  if(s.st.q >= 16 && !s.st.promos) c.push([6, `工作了 ${Math.floor(s.st.q/4)} 年，你一次都没有晋升过。`]);
+  if(s.st.juan >= 20) c.push([4.5, `你卷了 ${s.st.juan} 个季度，相当于 ${Math.floor(s.st.juan/4)} 年没有周末。`]);
+  if(!c.length){
+    if(s.st.promos >= 3) return `你一共晋升了 ${s.st.promos} 次，每一次都来之不易。`;
+    return `你在大厂度过了 ${s.st.q} 个季度，加过的班没人记得，但你自己记得。`;
+  }
+  c.sort((x,y) => y[0]-x[0]); return c[0][1];
+}
+const RARITY = {"e":{"abroad":2.15,"farm_good":4.66,"blogger_mid":6.46,"rest_bad":5.32,"farm_mid":3.21,"soe_mid":2.9,"lottery":0.91,"fish_good":7.21,"phd_good":1.55,"nomad_good":5.98,"noncompete":1.3,"blogger_good":4.86,"bankrupt":0.66,"civil_good":4.32,"startup_good":2,"exec":3.33,"fish_mid":4.57,"shop_mid":2.4,"nomad_mid":2.56,"home_good":5.66,"home_mid":5.56,"civil_mid":2.1,"soe_good":2.02,"shop_good":3.52,"home_bad":0.53,"blogger_bad":0.66,"phd_mid":0.83,"ai_replaced":1.21,"fire":0.4,"soe_bad":0.73,"rest_good":4.82,"shop_bad":1.27,"angel":0.98,"rest_mid":1.93,"spinoff":0.19,"fish_bad":0.34,"phd_bad":0.07,"farm_bad":0.36,"civil_bad":0.16,"startup_mid":0.1,"blame":0.09,"startup_bad":0.03,"nomad_bad":0.13,"foreign":0.01,"fossil":0.01,"health":0.01,"burnout":0.01,"moyu":0.01,"gig_good":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"卷王":10.46,"一号工程元老":24.95,"绩效守门员":17.4,"旅行爱好者":27.64,"狗爸狗妈":13.58,"新农人":8.22,"合作社带头人":4.06,"摸鱼大师":8.93,"跳槽达人":21.25,"A 股贡献者":8.47,"前大厂博主":11.97,"猫奴":18.52,"间隔年":12.07,"被割过的韭菜":26.16,"国企人":5.64,"拳击爱好者":3.69,"大厂船长":9.19,"博士":2.38,"顶会作者":0.69,"地中海":3.77,"活水之王":14.16,"顶格绩效传说":21.09,"猫狗双全":24.67,"数字游民":8.66,"地球是我的工位":5.48,"房奴":3.8,"三千点守望者":3.96,"环球旅行家":9.11,"背锅侠":0.72,"半马完赛":6.74,"全马完赛":1.57,"爆款制造机":2.04,"岩友":3.62,"上岸":6.57,"笔杆子":4.32,"创业者":2.13,"B 轮掌舵人":2,"百公里骑士":3.58,"行万里路":9.32,"网球爱好者":3.78,"对赌人生":1.09,"奶爸奶妈":1.8,"渔家乐老板":2.01,"浪里白条":2.17,"咖啡店主":7.19,"回乡青年":11.74,"小城院子":5.66,"老板的远房亲戚":0.6,"飞盘社交达人":3.5,"国企一把手":2.02,"连锁老板":3.52,"瑜伽达人":2.23,"冲浪玩家":0.78,"走遍中国":3.81,"股神":0.6,"雪道飞人":0.89,"撸铁人":2.14,"百万粉丝":2.96,"普通打工人":0.92,"羽球健将":3.59,"阳朔岩壁":0.82,"手艺人":3.26,"前大厂高 P 回流":0.52,"天才少年计划":0.07,"地球 Online 全图鉴":0.08,"仲裁赢家":0.03,"老司机":0.01,"便利店老板":0.01}}; // 由 sim/rarity.js 模拟生成：每个结局/称号在模拟人生中出现的比例（%）
+function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1(v)}%` : `${Math.round(v)}%`; }
+function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
+function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }
+function rarestTitle(list){ let best = null; for(const t of (list||titles())){ const v = RARITY.t[t]; if(v != null && (!best || v < best[1])) best = [t, v]; } return best && best[1] < 30 ? {n:best[0], p:rarePhrase(best[1])} : null; }
 // 第二人生称号：[称号, 提示, 条件(c, tier)]
 const CH_TITLES = {
   civil:[['上岸','考公上岸',c=>c.data.in], ['笔杆子','在单位里写出了名堂',(c,t)=>t==='good']],
@@ -1713,6 +1821,7 @@ function titleDex(){
   ];
   SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
   TRAVEL_ACH.forEach(a => d.push(['旅行', a.n, {t5:'去过 5 个地方', t10:'去过 10 个地方', cn8:'去过 8 个国内城市', ab5:'去过 5 个国家', all:'所有地方都去过'}[a.k]]));
+  d.push(['限定', '尾款人', '双十一限时事件'], ['限定', '大促守夜人', '双十一或 618 限时事件'], ['限定', '春节值班人', '春节限时事件'], ['限定', '年终奖拿满', '春节限时事件'], ['限定', '谈薪高手', '金三银四限时事件'], ['限定', '金牌导师', '毕业季限时事件']);
   Object.values(CH_TITLES).forEach(a => a.forEach(x => d.push(['第二人生', x[0], ''])));
   RARES.forEach(r => d.push(['稀有身份', r.n, '']));
   return d;
@@ -1738,6 +1847,12 @@ function titles(){
   for(const a of TRAVEL_ACH) if((s.ach||[]).includes(a.k)) t.push(a.n);
   for(const a of s.sAch) t.push(a);
   if(s.st.arb) t.push('仲裁赢家');
+  if(s.flags.wk) t.push('尾款人');
+  if(s.flags.d11night) t.push('大促守夜人');
+  if(s.flags.cny) t.push('春节值班人');
+  if(s.flags.bonus) t.push('年终奖拿满');
+  if(s.flags.raise) t.push('谈薪高手');
+  if(s.flags.mentor) t.push('金牌导师');
   const c = s.chapter;
   if(c && CH_TITLES[c.k] && s.over && (s.ending||'').startsWith(c.k+'_')){ const tier = s.ending.split('_').pop(); for(const x of CH_TITLES[c.k]) if(x[2](c, tier)) t.push(x[0]); }
   if(s.rare) t.push(s.rare.n);
@@ -1754,6 +1869,7 @@ function end(k){
   s.pct = clamp(Math.round(sc*1.05), 1, 99);
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
+  s.persona = persona(); s.sting = stingLine();
   try{ const L5 = pastLives(); L5.unshift(lifeRecord()); STORE.setItem('dc_lives', JSON.stringify(L5.slice(0,5))); }catch(err){}
   try{ const g = JSON.parse(STORE.getItem('dc_titles')||'[]'); s.newTitles = titles().filter(t => !g.includes(t)); if(s.newTitles.length) STORE.setItem('dc_titles', JSON.stringify(g.concat(s.newTitles))); }catch(err){ s.newTitles = []; }
   if(HAS_DOM) showEnding();
@@ -2375,7 +2491,7 @@ function hlText(ic, l){
 const HL_CAP = {'✨':5, '🌧':3, '🌟':3, '📊':3, '🏅':5, '📉':3, '🐾':2, '🤝':4};
 function lifeRecord(){
   const e = ENDINGS[s.ending], d = new Date(), p2 = n => String(n).padStart(2,'0');
-  return { date:`${d.getMonth()+1} 月 ${d.getDate()} 日 ${p2(d.getHours())}:${p2(d.getMinutes())}`, n:e.n, t:e.t, pct:s.pct, quote:s.quote, titles:titles(),
+  return { date:`${d.getMonth()+1} 月 ${d.getDate()} 日 ${p2(d.getHours())}:${p2(d.getMinutes())}`, n:e.n, t:e.t, pct:s.pct, quote:s.quote, titles:titles(), persona:(s.persona||persona()).n, sting:s.sting||'',
     who:`${s.edu.n} · ${s.comp.n} · ${s.role.n}`,
     sub:`${s.startAge} 岁入行 → ${s.age} 岁 · ${Math.floor(s.st.q/4)} 年 · ${s.st.companies} 家公司 · 晋升 ${s.st.promos} 次 · 身家 ${r1(s.money+invTotal())} 万`,
     hl:lifeHighlights() };
@@ -2441,6 +2557,8 @@ let curRoll = null;
 function showRoll(fromChal){
   curRoll = (fromChal && CHAL && rollFromCode(CHAL.code)) || roll(); if(!fromChal) CHAL = null; const r = curRoll;
   $('chal').hidden = !CHAL;
+  const fe = curFest(); $('d11').hidden = !fe;
+  if(fe) $('d11').innerHTML = `<b>限时 · ${fe.n}</b>（${fe.range}）<br>本期新增限时事件：${fe.d}，还有限定称号可以解锁。`;
   if(CHAL) $('chal').innerHTML = `<b>朋友发来一个开局挑战</b><br>同一个开局${CHAL.e ? `，朋友的结局是【${ENDINGS[CHAL.e].n}】` : ''}。你会走出什么样的人生？`;
   $('odds').innerHTML = `这是约 <b>1 / ${Math.round(1/r.odds).toLocaleString('en-US')}</b> 的开局`;
   const row = (k,v,sub,rare) => `<div class="row"><div class="k">${k}</div><div class="v">${rare?'<span class="chip rare">稀有</span>':''}${v}${sub?`<small>${sub}</small>`:''}</div></div>`;
@@ -2460,19 +2578,23 @@ function showRoll(fromChal){
   if(nL) $('lives').onclick = showLives;
   let tg = []; try{ tg = JSON.parse(STORE.getItem('dc_titles')||'[]'); }catch(err){}
   const dex = titleDex(), cats = [...new Set(dex.map(x=>x[0]))];
-  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('')
+  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n+(RARITY.e[k] != null ? `<small class="rp">${fmtPct(RARITY.e[k])}</small>` : ''):'？？？'}</span>`).join('')
     + `<div style="margin-top:18px">称号图鉴 ${dex.filter(x=>tg.includes(x[1])).length} / ${dex.length}</div>`
-    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}</span>` : `<span class="g hint">${x[2] ? '？' + x[2] : '？？？'}</span>`).join('')).join('');
+    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}${RARITY.t[x[1]] != null ? `<small class="rp">${fmtPct(RARITY.t[x[1]])}</small>` : ''}</span>` : `<span class="g hint">${x[2] ? '？' + x[2] : '？？？'}</span>`).join('')).join('');
 }
 function showEnding(){
   const e = ENDINGS[s.ending];
   const cls = e.t==='good'?'good':e.t==='bad'?'bad':'mid';
   const kind = {good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t];
-  $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}</div><h2 class="${cls}">${e.n}</h2>
+  const pe = s.persona || persona(), rt = rarestTitle(), er = endRarity();
+  $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}${er ? ` · ${er} 的人生走到这里` : ''}</div><h2 class="${cls}">${e.n}</h2>
     <div class="story">${endText(s.ending)}</div>
+    <div class="sting">${s.sting || stingLine()}</div>
     <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
+    <div class="persona"><small>你的职场人格</small><b>${pe.n}</b><span>${pe.d}</span></div>
     ${s.chal && s.chal.e ? `<div class="chal">${challengeLine()}</div>` : ''}
     <div>${titles().map(t=>`<span class="chip">${t}${(s.newTitles||[]).includes(t)?' <b style="color:var(--red,#c33)">新</b>':''}</span>`).join('')}</div>
+    ${rt ? `<div class="rtitle">最稀有的称号：<b>${rt.n}</b>，${rt.p} 的人生能拿到</div>` : ''}
     <div class="stats">
       <div><span>终年</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
       <div><span>大厂职级</span><span>${lvLabel()}</span></div><div><span>身家</span><span>${r1(s.money+invTotal())} 万</span></div>
@@ -2512,6 +2634,7 @@ function showRecap(rec, past){
     <div class="tl">${items}</div>
     <div class="rend" style="--d:${((hl.length*step+300)/1000).toFixed(2)}s">
       <div class="pct">你的人生超过了 <b style="color:${cls}">${rec.pct}%</b> 的打工人</div>
+      ${rec.persona ? `<div style="margin-top:6px">职场人格：<b>${rec.persona}</b></div>` : ''}${rec.sting ? `<div class="sting" style="font-size:16px">${rec.sting}</div>` : ''}
       <div style="margin-top:8px">${rec.titles.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
       <div class="q">“${rec.quote}”</div>
     </div>
@@ -2539,7 +2662,7 @@ function showLives(){
 }
 function shareText(){
   const e = ENDINGS[s.ending];
-  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，称号：${titles().join('、')}。${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
+  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，职场人格是「${(s.persona||persona()).n}」，称号：${titles().join('、')}。${s.sting || stingLine()}${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
 }
 function wrap(x, text, maxW){
   const lines = []; let cur = '';
@@ -2558,12 +2681,15 @@ async function showShare(){
   x.fillStyle = ink; x.font = `900 30px ${serif}`; x.fillText('大厂人生模拟器', P, y);
   x.fillStyle = mute; x.font = `15px ${sans}`; x.textAlign = 'right'; x.fillText(`${s.year} 年 · ${s.age} 岁`, W-P, y); x.textAlign = 'left';
   y += 22; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 2);
-  y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText({good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t], P, y);
+  const er = endRarity(), pe = s.persona || persona(), sting = s.sting || stingLine();
+  y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText({good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t] + (er ? ` · ${er} 的人生走到这里` : ''), P, y);
   y += 78; x.fillStyle = col; x.font = `900 72px ${serif}`; x.fillText(e.n, P, y);
   y += 44; x.fillStyle = ink; x.font = `18px ${sans}`; x.fillText(`${s.comp.n} · ${s.role.n} · ${lvLabel()}`, P, y);
   y += 40; x.font = `19px ${sans}`; x.fillStyle = '#3a352d';
   const story = wrap(x, endText(s.ending), W-2*P).slice(0,6);
   story.forEach((l,i) => { x.fillText(i===5 && wrap(x,endText(s.ending),W-2*P).length>6 ? l.slice(0,-1)+'…' : l, P, y); y += 32; });
+  y += 14; x.font = `700 26px ${serif}`; x.fillStyle = '#b5361f';
+  wrap(x, sting, W-2*P).forEach(l => { x.fillText(l, P, y); y += 38; }); y -= 6;
   y += 18; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 1);
   y += 58; x.font = `20px ${serif}`; x.fillText('你的人生超过了', P, y);
   const w1 = x.measureText('你的人生超过了').width + 12;
@@ -2571,6 +2697,10 @@ async function showShare(){
   const w2 = x.measureText(`${s.pct}%`).width + 12;
   x.fillStyle = ink; x.font = `20px ${serif}`; x.fillText('的打工人', P+w1+w2, y);
   y += 30; x.fillRect(P, y, W-2*P, 1);
+  y += 44; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText('职场人格', P, y);
+  x.fillStyle = ink; x.font = `900 30px ${serif}`; x.fillText(pe.n, P + 84, y + 4);
+  const pw = x.measureText(pe.n).width; x.font = `16px ${sans}`; x.fillStyle = mute; x.fillText(pe.d, P + 84 + pw + 14, y);
+  y += 24; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 1);
   const st = [['工作',`${Math.floor(s.st.q/4)} 年`],['身家',`${r1(s.money+invTotal())} 万`],['待过的公司',`${s.st.companies} 家`],['晋升',`${s.st.promos} 次`],['足迹',`${s.visited.length} 地`],['头发',`${Math.round(s.hair)}`]];
   y += 46; x.font = `18px ${sans}`;
   st.forEach((kv,i) => { const cx = P + (i%2)*((W-2*P)/2), cy = y + Math.floor(i/2)*42; x.fillStyle = mute; x.fillText(kv[0], cx, cy); x.fillStyle = ink; x.textAlign = 'right'; x.fillText(kv[1], cx+(W-2*P)/2-24, cy); x.textAlign = 'left'; });

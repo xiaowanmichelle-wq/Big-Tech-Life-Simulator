@@ -44,6 +44,8 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery{margin:4px 0 24px;font-size:13px;color:var(--mute)}
 .gallery .g{display:inline-block;margin:3px 6px 3px 0;padding:1px 8px;border:1px solid var(--line)}
 .gallery .g.on{color:var(--ink);border-color:var(--ink)}
+.gallery .g.hint{border-style:dashed;font-size:12px}
+.gallery .tcat{margin:8px 0 2px;font-size:12px}
 
 /* game */
 #game{padding-bottom:200px}
@@ -1627,6 +1629,21 @@ const QUOTES = {
   bad:   ['大厂生存不过一场游戏，放轻松。','工牌会失效，但你的人生不会。','绩效只是一个字母，你是一个完整的人。','公司不会记得你加过的班，但你的家人会。','先照顾好自己，再去改变世界。'],
   hidden:['大厂生存不过一场游戏，放轻松。','人生总有意外，有时候意外也挺好。'],
 };
+// 称号图鉴：[分类, 称号, 解锁提示]
+function titleDex(){
+  const d = [
+    ['职场','卷王','大部分季度都在卷'], ['职场','摸鱼大师','大部分季度都在摸鱼'], ['职场','背锅侠','背过两次锅'],
+    ['职场','跳槽达人','待过三家公司'], ['职场','活水之王','转岗两次'], ['职场','一号工程元老','赶上公司的一号工程'],
+    ['职场','绩效守门员','两次拿到垫底绩效'], ['职场','顶格绩效传说','三次拿到顶格绩效'], ['职场','仲裁赢家','劳动仲裁打赢了'],
+    ['职场','地中海','头发所剩无几'], ['职场','普通打工人','什么称号都没拿到'],
+    ['生活','房奴','买了房'], ['生活','奶爸奶妈','有了孩子'], ['生活','猫奴','养了一只猫'], ['生活','狗爸狗妈','养了一只狗'], ['生活','猫狗双全','猫和狗都养了'],
+    ['理财','股神','投资累计赚 200 万'], ['理财','被割过的韭菜','亏了很多钱，或者被骗过'], ['理财','A 股贡献者','在 A 股亏了三年'], ['理财','三千点守望者','持有 A 股满八年'],
+  ];
+  SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
+  TRAVEL_ACH.forEach(a => d.push(['旅行', a.n, {t5:'去过 5 个地方', t10:'去过 10 个地方', cn8:'去过 8 个国内城市', ab5:'去过 5 个国家', all:'所有地方都去过'}[a.k]]));
+  RARES.forEach(r => d.push(['稀有身份', r.n, '投胎时极小概率抽到']));
+  return d;
+}
 function titles(){
   const t = [], q = Math.max(1,s.st.q);
   if(s.st.juan/q > .55) t.push('卷王');
@@ -1662,6 +1679,7 @@ function end(k){
   s.pct = clamp(Math.round(sc*1.05), 1, 99);
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
+  try{ const g = JSON.parse(STORE.getItem('dc_titles')||'[]'); s.newTitles = titles().filter(t => !g.includes(t)); if(s.newTitles.length) STORE.setItem('dc_titles', JSON.stringify(g.concat(s.newTitles))); }catch(err){ s.newTitles = []; }
   if(HAS_DOM) showEnding();
 }
 
@@ -2349,7 +2367,11 @@ function showRoll(){
     row('家庭', r.fam.n, r.fam.d||'', r.fam.money>=500) +
     row('天赋', r.traits.map(t=>`<span class="chip">${t.n}</span>`).join(''), r.traits.map(t=>t.d).join('；'));
   let g = []; try{ g = JSON.parse(STORE.getItem('dc_endings')||'[]'); }catch(err){}
-  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('');
+  let tg = []; try{ tg = JSON.parse(STORE.getItem('dc_titles')||'[]'); }catch(err){}
+  const dex = titleDex(), cats = [...new Set(dex.map(x=>x[0]))];
+  $('gallery').innerHTML = `结局图鉴 ${g.length} / ${Object.keys(ENDINGS).length}<br>` + Object.entries(ENDINGS).map(([k,e]) => `<span class="g ${g.includes(k)?'on':''}">${g.includes(k)?e.n:'？？？'}</span>`).join('')
+    + `<div style="margin-top:18px">称号图鉴 ${dex.filter(x=>tg.includes(x[1])).length} / ${dex.length}</div>`
+    + cats.map(c => `<div class="tcat">${c}</div>` + dex.filter(x=>x[0]===c).map(x => tg.includes(x[1]) ? `<span class="g on">${x[1]}</span>` : `<span class="g hint">？${x[2]}</span>`).join('')).join('');
 }
 function showEnding(){
   const e = ENDINGS[s.ending];
@@ -2358,7 +2380,7 @@ function showEnding(){
   $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}</div><h2 class="${cls}">${e.n}</h2>
     <div class="story">${endText(s.ending)}</div>
     <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
-    <div>${titles().map(t=>`<span class="chip">${t}</span>`).join('')}</div>
+    <div>${titles().map(t=>`<span class="chip">${t}${(s.newTitles||[]).includes(t)?' <b style="color:var(--red,#c33)">新</b>':''}</span>`).join('')}</div>
     <div class="stats">
       <div><span>终年</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
       <div><span>大厂职级</span><span>${lvLabel()}</span></div><div><span>身家</span><span>${r1(s.money+invTotal())} 万</span></div>

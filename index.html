@@ -61,6 +61,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .hinttip{font-size:12px;color:var(--red);margin:6px 0 2px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
 .lifebtn{width:100%;margin:2px 0 14px}
+.gseg{display:inline-flex;border:1.5px solid var(--ink);margin-right:8px}.gseg button{border:0;background:transparent;padding:2px 14px;font:inherit;cursor:pointer}.gseg button.on{background:var(--ink);color:var(--paper)}
 .rewindbtn{width:100%;margin-top:10px;border-color:var(--red);color:var(--red)}
 .dailybtn{width:100%;margin:0 0 14px;border-color:var(--red);color:var(--red)}
 .sting{font-family:var(--serif,"Noto Serif SC",serif);font-weight:700;font-size:18px;color:var(--red);margin:10px 0 4px;line-height:1.5}
@@ -431,7 +432,7 @@ function rollFromCode(code){
     let entry = ENTRIES[ei];
     if(!edu || !comp || !role || !fam || !entry || (ri && !rare) || traits.some(t => !t) || new Set(tr).size !== tr.length || !comp.biz[bi]) return null;
     if(rare && (rare.key==='vet' || rare.key==='genius')) entry = rareEntry(rare);
-    return {edu, entry, comp, role, fam, traits, rare, bizIdx:bi, odds:1/Math.max(1, od)};
+    return {edu, entry, comp, role, fam, traits, rare, bizIdx:bi, odds:1/Math.max(1, od), gender: Math.random() < .5 ? 'm' : 'f'};
   }catch(err){ return null; }
 }
 function setChallenge(code, e){ if(!rollFromCode(code)) return null; CHAL = {code, e: ENDINGS[e] ? e : null}; return CHAL; }
@@ -495,7 +496,7 @@ function roll(){
   const tot = bw.reduce((a,b)=>a+b,0); let x = R()*tot, bizIdx = 0;
   for(let i=0;i<bw.length;i++){ x -= bw[i]; if(x<0){ bizIdx = i; break; } }
   odds *= bw[bizIdx]/tot;
-  return {edu,entry,comp,role,fam,traits,rare,bizIdx,odds};
+  return {edu,entry,comp,role,fam,traits,rare,bizIdx,odds,gender: R() < .5 ? 'm' : 'f'};
 }
 
 /* ============ 状态 ============ */
@@ -530,7 +531,7 @@ function startGame(r){
     if(r.rare.key==='genius'){ s.abi = 93; s.lvIdx = Math.min(c.exec-2, s.lvIdx+2); s.mult = 1.4; s.san -= 10; s.out=false; }
     if(r.rare.key==='vet'){ s.age = s.startAge = 33; s.lvIdx = c.exec-2; s.money += 380; s.abi = 80; s.hair = 45; s.hp -= 10; s.out=false; }
   }
-  s.rollCode = rollCode(r); s.daily = r.daily || null; s.chal = CHAL && CHAL.code === s.rollCode ? {e:CHAL.e} : null;
+  s.rollCode = rollCode(r); s.daily = r.daily || null; s.gender = r.gender === 'f' ? 'f' : 'm'; s.contacts = 0; s.chal = CHAL && CHAL.code === s.rollCode ? {e:CHAL.e} : null;
   s.cohort = makeCohort(); s.friends = []; s.others = [];
   if(HAS_DOM){ $('log').innerHTML=''; }
   log('入职', `你加入了${c.n}，${s.out?'身份是外包驻场':`职级 ${lvLabel()}（共 ${c.lv.length} 档，升到 ${c.lv[c.exec]} 算进入高管层）`}，分到「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}），岗位是${s.role.n}。`, 'head');
@@ -707,6 +708,7 @@ function evolveBiz(){
             else { L('名额被别人抢光了。','','bad'); leaveMenu('laid'); }
           }},
           {t:'拿 N+1 走人', f:()=>leaveMenu('laid')},
+          ...(s.lvIdx >= 1 && s.age <= 42 ? [{t:'跟着业务负责人出去单干', sub:'把这块业务带出去创业', f:()=>{ L(`业务负责人拉着你们几个核心成员出去单干，把「${b.n}」做成了一家新公司。`, fx({san:4})); startChapter('startup'); }}] : []),
         ]);
       } else L(`「${b.n}」被整体裁撤。`, '', 'warn');
     }
@@ -1023,8 +1025,6 @@ const EVENTS_BASE = [
    {t:'干了', f:()=>{ if(has('酒量惊人')) L('你把总监喝趴下了。他第二天拍着你的肩说“好兄弟”。', fx({net:8,boss:6})); else L('你吐在了出租车上。', fx({hp:-4,net:4,boss:2})); }},
    {t:'以茶代酒', f:()=>L('总监看了你一眼，没说话。', fx({net:1}))},
    {t:'借口加班先走', f:()=>L('你回到工位，发现真的有需求。', fx({san:-1}))}])},
- {w:3, f:()=>{ s.boss = has('向上管理大师') ? rnd(45,65) : rnd(30,55); L('组织架构调整。新老板从别的事业部空降，第一次周会就说“我们要重新梳理一下”。', '老板好感重置', 'warn'); }},
- {w:2, f:()=>{ const was = s.boss; s.boss = 50; L('你的老板离职了，去了竞对。', was>70 ? fx({san:-4})+' · 你的靠山没了' : '', 'warn'); }},
  {w:()=>s.abi>=60?3:1.5, c:()=>!s.unemployed, f:()=>{ const of = genOffer(1); offerAsk(of, '猎头来电', `“您好，我这边有一个非常匹配您的机会……” ${of.c.n} 开了个 offer。`); }},
  {w:()=>s.abi>=78?3:0, c:()=>!s.unemployed, f:()=>{ const of = genOffer(1.25); offerAsk(of, '竞对挖角', `${of.c.n} 的总监约你喝了一杯咖啡，当场开价。`); }},
  {w:()=>s.hp<55?6:0, f:()=>ask('体检报告','体检报告上的箭头，比你的 OKR 还多。',[
@@ -1052,15 +1052,12 @@ const EVENTS_BASE = [
    {t:'主动请缨', f:()=>{ if(chance(.6+(s.abi-60)*.01)) L('项目上线，数据亮眼。你的名字出现在了全员邮件里。', fx({hp:-6,qmod:10,abi:3,boss:5}),'good'); else L('项目延期了。你成了那个“负责人”。', fx({hp:-6,qmod:-4,san:-5}),'warn'); }},
    {t:'让给别人', f:()=>L('同事接了，后来升了。', fx({san:1}))}])},
  {w:2, f:()=>L('你被临时抽调去救火另一个项目。', fx({hp:-3,qmod:3,net:2}))},
- {w:()=>(s.age>=26&&s.age<=34&&!s.flags.married)?2:0, f:()=>ask('求婚','谈了两年的对象问你：“我们什么时候结婚？”',[
+ {w:()=>(s.age>=25&&s.age<=36&&!s.flags.married)?3.5:0, cd:6, f:()=>ask('求婚','谈了两年的对象问你：“我们什么时候结婚？”',[
    {t:'结！', f:()=>{ s.flags.married = true; L('你们在年假里办了婚礼。工作群里有人发了 200 块红包。', fx({san:10,money:-15}),'good'); }},
    {t:'等升完职再说', f:()=>L('对方沉默了。', fx({san:-4}))}])},
  {w:()=>(s.money>=150&&!s.flags.house&&s.age>=26)?2.5:0, f:()=>{ const down = Math.round(Math.min(s.money*.7,300)); ask('买房','中介说：“现在是最低点，再不上车就晚了。”',[
    {t:`上车，首付 ${down} 万`, f:()=>{ s.flags.house = true; L('你背上了 30 年房贷，从此每季度还款约 4 万。', fx({money:-down,san:4})); }},
    {t:'再等等', f:()=>L('你继续租房，房东又涨了 300。')}]); }},
- {w:()=>(s.flags.married&&!s.flags.kid&&s.age<40)?2:0, f:()=>ask('要孩子','爸妈在饭桌上第三次提起这件事。',[
-   {t:'要', f:()=>{ s.flags.kid = true; L('孩子出生了。你在产房外回了三封邮件。', fx({san:6,hp:-4})); }},
-   {t:'再说吧', f:()=>L('饭桌上安静了。')}])},
  {w:()=>s.fam.parents?3:(s.age>30?1:0), f:()=>L('父亲住院了。你请了一周假，往返了两次老家。', fx({money:-rnd(5,20),san:-5,qmod:-3}),'warn')},
  {w:()=>(s.age>=27&&s.age<=33&&!s.flags.married)?1.5:0, f:()=>L('你妈给你安排了一场相亲。对方问你：“你们公司是 996 吗？”', fx({san:-1}))},
  {w:2, f:()=>L(`CEO 发了一封全员信：“${pick(['我们要始终保持创业心态。','不要躺在过去的功劳簿上。','组织必须保持饥饿感。','今天是第一天，永远是第一天。','我们正处在最好的时代，也处在最危险的时刻。'])}”`, fx({san:-1}))},
@@ -1192,6 +1189,58 @@ const EVENTS_BASE = [
  {w:2, c:()=>s.age>=26, cd:16, f:()=>{ const good = s.lvIdx >= 2 || s.money >= 200; L(good ? '大学同学聚会，大家听说你在大厂，纷纷来加微信。' : '大学同学聚会，当年成绩最差的那个同学开了三家公司，买了单。', fx({san:good?4:-4})); }},
 
  /* ---------- 个人生活 ---------- */
+ // 婚育（按性别）
+ {w:()=>(s.flags.married && !s.flags.kid && !s.flags.preg && s.age>=26 && s.age<40)?5:0, cd:4, f:()=>{
+   const f = s.gender === 'f';
+   ask('要孩子吗', f ? '另一半说：“我们年纪也不小了。”你看了看下个季度的晋升答辩时间。' : '另一半说：“我们年纪也不小了。”你看了看下个季度的项目排期。', [
+     {t:'要', f:()=>{ s.flags.preg = true; s.flags.pregAt = s.turn;
+       if(f){ ask('你怀孕了', '验孕棒上是两条杠。公司还不知道。', [
+         {t:'告诉老板', sub:'孕期受法律保护，但可能少接核心项目', f:()=>{ s.flags.pregTold = true; L('老板说了句“恭喜”，然后把一个核心项目交给了别人。', fx({boss:-3,san:2})); }},
+         {t:'先瞒着，等稳定了再说', f:()=>L('你每天在工位上偷偷吃苏打饼干，开会时尽量坐在门口。', fx({hp:-4,san:-3}))}]); }
+       else L('另一半怀孕了。你下载了一个孕期 App，每天在工位上偷偷看宝宝今天有多大。', fx({san:4}));
+       s.timers.push({at: s.turn + 3, f:()=>{ if(s.over || s.unemployed) return; birthEvent(); }}); }},
+     {t:'再等等', f:()=>L('饭桌上安静了。', fx({san:-2}))}]);
+ }},
+ // 怀孕期间的面试 / 被问婚育（女性）
+ {w:()=>(s.gender==='f' && s.age>=26 && s.age<=34 && !s.flags.kid)?.8:0, cd:16, f:()=>ask('一个问题', '内部晋升答辩的最后，一位评委问你：“你最近有生育计划吗？”', [
+   {t:'如实说“有”', f:()=>L('评委点点头，在本子上写了什么。答辩结果下来，你“还需要再沉淀一下”。', fx({san:-6}), 'warn')},
+   {t:'“这和岗位能力有关吗？”', f:()=>L('会议室安静了五秒。后来有同事私下跟你说：“问得好。”', fx({san:3,boss:-3}))},
+   {t:'笑着说“暂时没有”', f:()=>L('你笑着说完，回工位后盯着屏幕发了很久的呆。', fx({san:-2}))}])},
+ // 换领导：主动选择
+ {w:2, f:()=>{ const n = pick(SURN) + pick(GIVN); ask('新老板', `组织架构调整，${n}从别的事业部空降过来当你的老板。第一次周会就说“我们要重新梳理一下”。`, [
+   {t:'主动约 1:1，汇报你手上的事', f:()=>{ const g = has('向上管理大师') || chance(.6); s.boss = g ? rnd(55,70) : rnd(35,50); L(g ? `${n}听完说：“你是组里最清楚业务的人。”` : `${n}一边听一边回消息，最后说：“好的，我了解了。”`, '老板好感重置', g ? 'good' : 'warn'); }},
+   {t:'先观望，看看新老板的风格', f:()=>{ s.boss = rnd(40,55); L('你在群里默默观察了一个月。新老板喜欢数据，不喜欢长文档。', '老板好感重置'); }},
+   {t:'趁机申请转岗', f:()=>transferMenu()}]); }},
+ {w:()=>s.boss>=65?2:1, f:()=>{ const was = s.boss; ask('老板要走了', '你的老板下周离职，去竞对当总监。走之前他单独约你吃了顿饭：“要不要跟我一起过去？”', [
+   {t:'跟老板走', f:()=>{ const of = genOffer(1.15); s.boss = Math.max(was, 70); offerAsk(of, '跟着老板走', `${of.c.n} 发来 offer，你的前老板会是你的直属上级。`); }},
+   {t:'留下', f:()=>{ s.boss = 50; L('你送了老板一束花。新老板还没定，组里的人都在观望。', was>70 ? fx({san:-4})+' · 你的靠山没了' : '', 'warn'); }}]); }},
+ // 前领导邀请创业
+ {w:()=>(s.lvIdx>=2 && !s.out && s.age<=42 && !s.flags.coInvite)?.9:0, once:1, f:()=>{ s.flags.coInvite = true; const n = pick(SURN) + pick(GIVN);
+   ask('前老板的电话', `以前的老板${n}出来创业了，拿到了一笔天使轮：“来当联合创始人吧，给你 5% 的股份，工资先打对折。”`, [
+     {t:'去！', sub:'辞职去创业', f:()=>{ L(`你递了辞呈。${n}在电话那头说：“好，明天来上班。”`, fx({san:6})); s.flags.coFounder = true; startChapter('startup'); }},
+     {t:'先帮他兼职出出主意', f:()=>L(`你每周末去${n}的办公室待半天。他说等公司做起来了，一定给你留个位置。`, fx({net:4,hp:-2}))},
+     {t:'婉拒', f:()=>L('你说现在不是好时机。挂了电话，你在阳台上站了很久。', fx({san:-2}))}]); }},
+ // 生病：休多久
+ {w:()=>(s.hp<55 && s.age>=26)?2.2:.4, cd:12, f:()=>{ const d = pick(['腰椎间盘突出','急性胃炎反复发作','甲状腺功能亢进','带状疱疹']);
+   ask('医生让你休息', `你被诊断出${d}。医生说至少要休息两个月，最好三个月。`, [
+     {t:'休两周就回去', sub:'保工作', f:()=>L('你回到工位时还在吃药。同事说你“恢复得真快”。', fx({hp:5,qmod:-2,san:-3}))},
+     {t:'按医嘱休满三个月', sub:'身体第一', f:()=>{ L('你休满了三个月。回来时发现手上的项目已经交给了别人。', fx({hp:25,san:10,qmod:-15,boss:-8})); if(chance(.25)){ s.bizIdx = edgeBiz(); L(`你被安排去了「${s.biz[s.bizIdx].n}」，HR 说“先过渡一下”。`, '', 'warn'); } }},
+     {t:'不请假，吃药硬扛', f:()=>L('你把药放在显示器旁边，每天定好闹钟。', fx({hp:-6,san:-4,qmod:3}))}]); }},
+ // 父母要求考公
+ {w:()=>(s.age>=24 && s.age<=33 && !s.flags.civil && !s.flags.parentAsk)?1.2:0, once:1, f:()=>{ s.flags.parentAsk = true;
+   ask('爸妈的电话', '你妈在电话里说：“你表姐考上了，在区里上班，朝九晚五。你也回来考公吧，不然过年别回来了。”', [
+     {t:'辞职回家备考', f:()=>{ s.flags.civil = true; L('你提了离职。你妈在家族群里发了一条“我儿女要回来考公了”。', fx({san:3})); startChapter('civil'); }},
+     {t:'在职偷偷备考', sub:'会很累', f:()=>{ s.flags.civilSide = true; L('你在网上买了一套行测资料，每天地铁上刷题。', fx({hp:-3,san:-2})); s.timers.push({at: s.turn + 4, f:()=>{ if(s.over || s.unemployed || s.chapter) return; if(chance(.18 + (s.abi-50)*.005)){ ask('考上了', '公示名单上有你的名字。', [{t:'辞职去上岸', f:()=>{ s.flags.civil = true; startChapter('civil', {passed:true}); }}, {t:'放弃，继续在大厂', f:()=>L('你给你妈打了个电话，她半天没说话。', fx({san:-6}))}]); } else L('笔试差了 1.5 分。你妈说：“明年再考。”', fx({san:-5}), 'warn'); }}); }},
+     {t:'拒绝：“我想再拼几年”', f:()=>{ s.flags.parentCold = true; L('电话那头挂断了。那年春节，你在出租屋里一个人包了饺子。', fx({san:-8})); s.timers.push({at: s.turn + rnd(6,10), f:()=>{ if(s.over) return; L('你妈突然发来一条语音：“过年回来吧，想你了。考不考公，随你。”', fx({san:10}), 'good'); }}); }}]); }},
+ // 人脉回报：加过的微信、帮过的人，会在某天回来
+ {w:()=>Math.max(0, (s.net-40)/8) + (s.contacts||0)/30, cd:5, f:()=>{
+   const src = (s.contacts||0) >= 20 && chance(.6) ? '之前行业沙龙上加的一个微信好友' : '一个很久没联系的老同事';
+   const x = rnd(0,3);
+   if(x === 0){ s.flags.friendHelp = true; L(`${src}突然找你：“我们组在招人，要不要内推？直接进终面。”`, '下次找工作成功率更高', 'good'); }
+   else if(x === 1){ const v = r1(rf(2,8)); L(`${src}介绍了一个周末的咨询副业，三次会就赚了 ${v} 万。`, fx({money:v,net:2}), 'good'); }
+   else if(x === 2){ L(`你家人生病急需挂专家号，${src}帮你托了关系，第二天就看上了。`, fx({san:6}), 'good'); }
+   else { s.flags.promoHelp = true; L(`${src}在你们公司当了总监，晋升答辩时是评委之一。答辩前一天他提醒你：“多讲讲业务结果。”`, '下次晋升更容易', 'good'); }
+ }},
  {w:2, once:1, f:()=>ask('健身卡','公司楼下健身房搞活动，年卡五折。',[
    {t:'办！', f:()=>{ s.money = r1(s.money-.3); if(chance(.4)) L('你坚持下来了，体检报告第一次全绿。', fx({hp:10,san:4}),'good'); else L('你一共去了三次。'); }},
    {t:'不办', f:()=>{}}])},
@@ -1479,11 +1528,8 @@ const ACTIONS = [
   /* 生活 */
   {k:'l', n:'休假', f:()=>vacationMenu()},
   {k:'l', n:'运动', f:()=>sportMenu()},
-  {k:'l', n:'约朋友', f:()=>L(pick(['你约了几个老同学吃火锅，聊到十二点。','你去参加了一个行业沙龙，加了二十个微信。','你和前同事打了一下午羽毛球。']), fx({net:4,san:4,money:-.3}))},
-  {k:'l', n:'养宠物', c:()=>s.pets.length<2, f:()=>ask('养宠物','你想养点什么？',[
-    {t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>{ const n = adoptPet('猫'); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); }},
-    {t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>{ const n = adoptPet('狗'); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); }},
-    {t:'再想想', f:()=>{}}])},
+  {k:'l', n:'约朋友', f:()=>{ const i = rnd(0,2); if(i === 1) s.contacts = (s.contacts||0) + 20; L(['你约了几个老同学吃火锅，聊到十二点。','你去参加了一个行业沙龙，加了二十个微信。','你和前同事打了一下午羽毛球。'][i], fx({net:4,san:4,money:-.3}) + ' · 人脉以后会在找工作、晋升、遇到麻烦时帮上忙'); }},
+  {k:'l', n:'宠物', f:()=>petMenu()},
   {k:'l', n:'投资理财', f:()=>investMenu()},
 ];
 function transferMenu(){
@@ -1801,6 +1847,35 @@ function hobbyTick(){
 
 /* ============ 宠物 ============ */
 const PETN = {'猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐'], '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐']};
+function birthEvent(){
+  const f = s.gender === 'f';
+  s.flags.preg = false; s.flags.kid = true;
+  if(f){
+    log('', '孩子出生了。你在产房里抱着这个小小的人，觉得过去的所有加班都不重要了。', 'good milestone');
+    ask('产假', '法定产假一百多天。工作群里，你的头像已经灰了一个月。', [
+      {t:'休满产假，再加一个月哺乳假', f:()=>{ L('你休满了产假。回来那天，工位上的绿植已经枯了。', fx({san:10,hp:6,qmod:-15,boss:-5})); if(chance(.35)){ s.bizIdx = edgeBiz(); L(`返岗后你被调去了「${s.biz[s.bizIdx].n}」。HR 说是“照顾你，工作量小一点”。`, fx({san:-6}), 'warn'); } }},
+      {t:'提前两个月返岗', f:()=>L('你一边背奶一边开会，在母婴室里回了三十封邮件。', fx({hp:-8,san:-6,boss:6}))}]);
+  } else {
+    log('', '孩子出生了。你在产房外回了三封邮件，然后被护士叫进去抱孩子。', 'good milestone');
+    ask('陪产假', '公司有十几天陪产假。但老板说：“这个版本很关键，你看能不能……”', [
+      {t:'休满陪产假', f:()=>L('你关掉了工作软件，学会了换尿布和冲奶粉。', fx({san:8,boss:-4,qmod:-4}))},
+      {t:'只休三天', f:()=>L('你第四天就回到了工位。另一半在电话里没说话。', fx({san:-6,boss:4}))}]);
+  }
+}
+function petMenu(){
+  const o = [];
+  for(const p of s.pets){
+    if(p.type === '狗') o.push({t:`带「${p.name}」去公园撒欢`, sub:'健康和精神都会好一点', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你带${p.name}去公园跑了一大圈，它把一只飞盘叼回来七次。`,`${p.name}在草地上打滚，你坐在长椅上，第一次觉得周末这么长。`,`你和${p.name}去爬了山，它在山顶对着远处叫了三声。`]), fx({hp:4,san:5,money:-.2}), 'pet'); }});
+    else o.push({t:`陪「${p.name}」玩逗猫棒`, sub:'精神会好一些', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你陪${p.name}玩了一晚上逗猫棒，它最后跳上你的键盘睡着了。`,`${p.name}趴在你腿上打呼噜，你没有打开电脑。`,`你给${p.name}买了个新猫爬架，它更喜欢装猫爬架的那个纸箱。`]), fx({san:6,money:-.3}), 'pet'); }});
+    o.push({t:`带「${p.name}」去体检洗澡`, sub:'花点钱，它会更健康', f:()=>{ p.bond = (p.bond||0) + 1; p.next = s.turn + 3; L(`${p.name}洗完澡香喷喷的，医生说它很健康。`, fx({san:3,money:-.8}), 'pet'); }});
+  }
+  if(s.pets.length < 2){
+    o.push({t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>{ const n = adoptPet('猫'); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); }});
+    o.push({t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>{ const n = adoptPet('狗'); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); }});
+  }
+  o.push({t:'算了', f:()=>{}});
+  ask(s.pets.length ? '你的宠物' : '养宠物', s.pets.length ? `${s.pets.map(p=>p.name).join('和')}正看着你。` : '你想养点什么？', o);
+}
 function adoptPet(type){
   const names = PETN[type].filter(n => !s.pets.some(p=>p.name===n));
   const name = pick(names.length ? names : PETN[type]);
@@ -2832,9 +2907,11 @@ function showRoll(fromChal, daily){
     row('入职方式', r.entry.n, r.entry.d, r.entry.lv&&r.entry.mult) +
     row('公司', `${r.comp.n} <span class="chip">${r.comp.tag}</span>`, `${r.comp.d}<br>${r.comp.sys}`) +
     row('业务', `${biz[0]} <span class="badge st${biz[1]}">${STN[biz[1]]}</span>`, '业务地位会随时间变化：边缘可能突然变核心，也可能被裁撤') +
+    `<div class="row"><div class="k">性别</div><div class="v"><span class="gseg"><button class="${r.gender==='m'?'on':''}" data-g="m">男</button><button class="${r.gender==='f'?'on':''}" data-g="f">女</button></span><small>会影响婚育、产假等人生事件</small></div></div>` +
     row('岗位', r.role.n) +
     row('家庭', r.fam.n, r.fam.d||'', r.fam.money>=500) +
     row('天赋', r.traits.map(t=>`<span class="chip">${t.n}</span>`).join(''), r.traits.map(t=>t.d).join('；'));
+  document.querySelectorAll('#rollcard .gseg button').forEach(b => b.onclick = () => { curRoll.gender = b.dataset.g; document.querySelectorAll('#rollcard .gseg button').forEach(x => x.classList.toggle('on', x === b)); });
   renderGallery();
 }
 function renderGallery(){

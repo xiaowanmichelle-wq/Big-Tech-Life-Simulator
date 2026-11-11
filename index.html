@@ -2684,7 +2684,7 @@ async function showShare(){
   y += 22; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 2);
   const er = endRarity(), pe = s.persona || persona(), sting = s.sting || stingLine();
   y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText({good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t] + (er ? ` · ${er} 的人生走到这里` : ''), P, y);
-  y += 78; x.fillStyle = col; x.font = `900 72px ${serif}`; x.fillText(e.n, P, y);
+  y += 78; x.fillStyle = col; let fs = 72; x.font = `900 ${fs}px ${serif}`; while(fs > 36 && x.measureText(e.n).width > W-2*P){ fs -= 4; x.font = `900 ${fs}px ${serif}`; } x.fillText(e.n, P, y);
   y += 44; x.fillStyle = ink; x.font = `18px ${sans}`; x.fillText(`${s.comp.n} · ${s.role.n} · ${lvLabel()}`, P, y);
   y += 40; x.font = `19px ${sans}`; x.fillStyle = '#3a352d';
   const story = wrap(x, endText(s.ending), W-2*P).slice(0,6);

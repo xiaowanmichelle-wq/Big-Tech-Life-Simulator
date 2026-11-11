@@ -2597,7 +2597,7 @@ function showEnding(){
     <div>${titles().map(t=>`<span class="chip">${t}${(s.newTitles||[]).includes(t)?' <b style="color:var(--red,#c33)">新</b>':''}</span>`).join('')}</div>
     ${rt ? `<div class="rtitle">最稀有的称号：<b>${rt.n}</b>，${rt.p} 的人生能拿到</div>` : ''}
     <div class="stats">
-      <div><span>终年</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
+      <div><span>结局时</span><span>${s.age} 岁</span></div><div><span>工作</span><span>${Math.floor(s.st.q/4)} 年</span></div>
       <div><span>大厂职级</span><span>${lvLabel()}</span></div><div><span>身家</span><span>${r1(s.money+invTotal())} 万</span></div>
       <div><span>待过的公司</span><span>${s.st.companies} 家</span></div><div><span>晋升</span><span>${s.st.promos} 次</span></div>
       <div><span>背过的锅</span><span>${s.blame} 口</span></div><div><span>头发</span><span>${Math.round(s.hair)}</span></div>

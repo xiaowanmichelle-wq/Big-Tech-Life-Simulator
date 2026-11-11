@@ -120,6 +120,9 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .ln.warn .x{color:var(--amber)}
 .ln.head .x{font-family:var(--serif);font-weight:700}
 .ln.head .x::before{content:"▍";color:var(--red)}
+.ln.twist{background:#fbf1ec;border-left:3px solid var(--red);padding:8px 10px;margin:6px 0}
+.ln.twist .t{color:var(--red);font-weight:700}
+.ln.twist .x{font-family:var(--serif);font-weight:700;color:var(--ink)}
 .ln.perf .x{font-family:var(--serif);font-weight:700}
 
 #choice{margin:14px 0 8px 88px}
@@ -576,19 +579,20 @@ function nextQuarter(){
   s.turn++; s.q++; if(s.q>4){ s.q=1; s.year++; }
   s.st.q++; s.compQ++; s.sinceProm++; s.actedW=false; s.actedL=false;
   if(s.turn % 4 === 0) s.age++;
-  log('', `${s.year} 年 第 ${s.q} 季度 · ${s.age} 岁`, 'div');
+  log('', `${s.year} 年 第 ${s.q} 季度 · ${s.age} 岁`, 'div'); s.qHead = s.log.length - 1;
   if(s.chapter){ chapterQuarter(); if(s.queue.length) s.pendingFinish = true; else finishQuarter(); render(); return; }
   economy(); drift(); petTick(); hobbyTick(); evolveBiz(); cohortTick();
   if(s.q===4) settleInvest();
   // 定时事件
   s.timers = s.timers.filter(t => { if(t.at <= s.turn){ t.f(); return false; } return true; });
+  if(s.over || s.unemployed){ render(); return; }
   if(s.wave > 0) s.wave--;
   if(s.blame > 0 && s.turn - (s.blameAt||0) >= 8){ s.blame--; s.blameAt = s.turn; L('时间过去了，那口旧锅渐渐没人提了。', `背锅 ${s.blame}/3`); }
   if(s.turn % 4 === 0) ageEvents();
   if(s.comp.unicorn) unicornTick();
   if(s.comp.spinoff && s.spin) spinTick();
   if(s.over) return render();
-  randomEvents();
+  if(!arcTick() || chance(.5)) randomEvents();
   if(s.queue.length) s.pendingFinish = true; else finishQuarter();
   render();
 }
@@ -657,6 +661,7 @@ function finishQuarter(){
   if(endChecks()) return;
   if(!s.queue.length) layoffCheck();
   if(!s.unemployed) fireCheck();
+  if(!s.over && !s.unemployed && !s.queue.length) quietMerge();
 }
 
 function endChecks(){
@@ -799,6 +804,7 @@ function promote(){
 /* ============ 裁员 / 离职 ============ */
 function layoffCheck(){
   if(isRare('kin')) return;
+  if(s.flags.shield && s.wave){ s.flags.shield = false; L('裁员名单公布了，你不在上面——那个转岗名额救了你。', '', 'good'); return; }
   let p = s.comp.lay * [3,1,.4][bizSt()];
   const lp = lastPv(); if(lp===0) p *= 3; else if(lp < .4) p *= 1.5;
   if(s.age>=35) p *= 2; if(s.age>=40) p *= 1.5;
@@ -1283,7 +1289,178 @@ function randomEvents(){
   const fire = e => { s.cd[e.id] = s.turn; e.f(); };
   let pool = allEvents().filter(ok);
   if(chance(.9) && pool.length){ const e = wpick(pool,wf); fire(e); pool = pool.filter(x=>x!==e); }
-  if(chance(.35) && pool.length && !s.unemployed && !s.over){ fire(wpick(pool,wf)); }
+  if(chance(.25) && pool.length && !s.unemployed && !s.over){ fire(wpick(pool,wf)); }
+}
+
+/* ============ 故事线：早年的选择，几年后回来改变命运（现实向的大转折） ============ */
+const TW = (text, sub='', kind='') => log('转折', text, ('twist ' + kind).trim(), sub);
+const nm = () => pick(SURN) + pick(GIVN);
+// 延迟回收：只在还在大厂、没出局时触发
+function later(n, f, anywhere){ s.timers.push({at: s.turn + n, f: () => { if(s.over || s.unemployed || s.chapter) return; if(!anywhere && s.out) return; f(); }}); }
+const edgeBiz = () => { let j = 0; s.biz.forEach((b,i) => { if(!b.dead && b.st < s.biz[j].st) j = i; }); return j; };
+const bestBiz = () => { let j = s.bizIdx; s.biz.forEach((b,i) => { if(!b.dead && b.st > s.biz[j].st) j = i; }); return j; };
+const ARCS = [
+  {k:'intern', c:()=>s.lvIdx >= 1, seed:()=>{ const n = nm(), cid = s.comp.id; s.arc.intern = {n};
+    ask('新来的实习生', `组里来了个实习生${n}，每天问你十几个问题，有些问题很基础。`, [
+      {t:'耐心带他', sub:'会占掉不少时间', f:()=>{ s.arc.intern.kind = 1; L(`你给${n}写了一份新人指南，还帮忙改了答辩 PPT。${n}说以后一定请你吃饭。`, fx({san:-2,net:2,qmod:-2})); }},
+      {t:'让他自己看文档', f:()=>{ s.arc.intern.kind = 0; L(`你把 wiki 链接甩给了${n}。对方回了一个“好的”。`, fx({san:2})); }}]);
+    later(rnd(9,14), () => {
+      const a = s.arc.intern;
+      if(s.comp.id === cid && !s.out){
+        if(a.kind){ s.boss = Math.max(s.boss, 85); s.flags.promoHelp = true; TW(`公司空降了一位新总监——是${n}。当年那个问你基础问题的实习生，读完 MBA 回来了。${n}在全员会上说：“我实习第一天，是一位前辈手把手带的我。”然后看向了你。`, '老板好感拉满 · 下次晋升更容易', 'good'); }
+        else { s.boss = Math.min(s.boss, 22); TW(`公司空降了一位新总监——是${n}。当年那个你甩了 wiki 链接的实习生。第一次 1:1，${n}笑着说：“当年你让我自己看文档，我看得很认真。”`, '老板好感跌到谷底', 'bad'); }
+      } else if(a.kind){ TW(`猎头打来电话：“有位${n}总点名想挖你，说你是TA职业生涯的第一个老师。”`, '', 'good'); offerAsk(genOffer(1.25), '老熟人的 offer', `${n}现在是一家公司的负责人，给你开了一个很有诚意的价。`); }
+    }, true);
+  }},
+  {k:'faction', c:()=>s.lvIdx >= 1 && !s.comp.foreign, seed:()=>{ const a = nm(), b = nm(); s.arc.faction = {a, b};
+    ask('神仙打架', `两位 VP 在抢同一块地盘。${a} 说“跟我干，明年给你升一级”，${b} 的人也私下约你喝了咖啡。`, [
+      {t:`跟 ${a}`, f:()=>{ s.arc.faction.pick = 'a'; L(`你在周会上替 ${a} 说了几句话。`, fx({boss:6})); }},
+      {t:`跟 ${b}`, f:()=>{ s.arc.faction.pick = 'b'; L(`你把 ${b} 的方案改得更漂亮了。`, fx({boss:6})); }},
+      {t:'两边都不站', f:()=>{ s.arc.faction.pick = 'n'; L('你只说事，不站人。两边都觉得你“不太懂事”。', fx({boss:-4})); }}]);
+    later(rnd(5,9), () => {
+      const f = s.arc.faction, lose = chance(.5) ? 'a' : 'b', loser = f[lose], winner = f[lose === 'a' ? 'b' : 'a'];
+      TW(`集团内审结果出来了：VP ${loser} 因“利益输送”被带走调查。${loser}那条线上的人，一夜之间被清洗。`, '', 'bad');
+      if(f.pick === lose){
+        if(chance(.5)){ log('', `你的名字出现在了“整顿名单”上。HR 说这是“组织调整”。`, 'bad'); leaveMenu('fired'); }
+        else { s.bizIdx = edgeBiz(); s.boss = 25; L(`你被“平调”去了「${s.biz[s.bizIdx].n}」。没有人再约你喝咖啡了。`, fx({san:-10}), 'bad'); }
+      } else if(f.pick === 'n'){ L(`你是这条线上少数没被牵连的人。新上任的 ${winner} 把一半的盘子交给了你。`, fx({qmod:8,net:4,boss:10}), 'good'); }
+      else { s.flags.promoHelp = true; L(`${winner} 赢了。庆功宴上，${winner}把你叫到身边：“这次你站对了。”`, fx({boss:15,qmod:6}), 'good'); }
+    });
+  }},
+  {k:'whistle', c:()=>!s.out, seed:()=>{ s.arc.whistle = {};
+    ask('一份奇怪的合同', '你在核对供应商合同时发现：直属老板一直把项目包给他小舅子的公司，报价高出市场一倍。', [
+      {t:'实名举报给合规部', f:()=>{ s.arc.whistle.k = 'report'; L('你把材料整理成了 23 页，发到了合规邮箱。按下发送键的时候，你的手在抖。', fx({san:-4})); }},
+      {t:'装作没看见', f:()=>{ s.arc.whistle.k = 'silent'; L('你关掉了文件，告诉自己：这不关我的事。', fx({san:-2})); }},
+      {t:'私下提醒老板收手', f:()=>{ s.arc.whistle.k = 'warn'; L('你在 1:1 结束前说了一句：“那家供应商的报价，审计可能会问。”老板沉默了很久。', fx({boss:-3})); }}]);
+    later(rnd(4,6), () => {
+      const k = s.arc.whistle.k;
+      if(k === 'report'){
+        if(chance(.55)){ TW('合规部查实了。老板被当天辞退，你收到了一封署名 CEO 的感谢信。', '', 'good'); if(s.lvIdx < s.comp.exec - 1) promote(); else s.boss = Math.max(s.boss, 75); }
+        else { s.boss = 15; TW('举报材料“泄露”了。老板没事，你的绩效却连续被打低——理由是“团队协作有问题”。', fx({qmod:-15,san:-10}), 'bad'); }
+      } else if(k === 'silent'){
+        if(chance(.5)){ s.blame++; s.blameAt = s.turn; TW('集团审计进场。老板被带走，所有在合同上签过字的人都被约谈——包括你。', `背锅 ${s.blame}/3 · ` + fx({san:-8}), 'bad'); }
+        else L('这件事好像从来没人知道。老板后来升了，你偶尔会想起那份合同。', fx({san:-3}));
+      } else {
+        if(chance(.65)){ s.bizIdx = bestBiz(); TW('老板收手了。半年后他升了 VP，第一件事是把你调到了核心业务。', fx({boss:20,qmod:5}), 'good'); }
+        else { s.bizIdx = edgeBiz(); TW(`老板没收手，但开始防着你。你被调去了「${s.biz[s.bizIdx].n}」。`, fx({boss:-15,san:-6}), 'bad'); }
+      }
+    });
+  }},
+  {k:'buyback', c:()=>!s.out && !s.comp.foreign, seed:()=>{ const v = r1(curPay() * rf(.6,1)); s.arc.buyback = {v};
+    ask('期权回购', `公司发起期权回购：你手里的期权，现在卖可以拿到约 ${v} 万。名额有限，一周内决定。`, [
+      {t:`卖掉，落袋为安（+${v} 万）`, f:()=>{ s.arc.buyback.sold = true; L(`你卖掉了期权，拿着这笔钱付了首付的一半。`, fx({money:v,san:4})); }},
+      {t:'不卖，赌公司上市', f:()=>{ s.arc.buyback.sold = false; L('你把回购邮件归档了。同事说你“格局打开了”。'); }}]);
+    later(rnd(8,12), () => {
+      const b = s.arc.buyback, ipo = chance(.5);
+      if(b.sold){
+        if(ipo) TW(`公司在港股上市了，敲钟那天市值翻了三倍。你当年卖掉的期权，现在值 ${r1(b.v*3)} 万。`, fx({san:-12}), 'bad');
+        else TW('公司估值腰斩，期权回购暂停。当年卖掉的人被大家叫做“先知”——包括你。', fx({san:8}), 'good');
+      } else {
+        if(ipo){ const g = r1(b.v * rf(2.5,4)); TW(`公司上市了！解禁那天，你的期权值 ${g} 万。你在工位上坐了很久，然后给爸妈打了个电话。`, fx({money:g,san:10}), 'good'); }
+        else TW('上市计划被叫停。你手里的期权，重新变回了一张纸。', fx({san:-8}), 'bad');
+      }
+    });
+  }},
+  {k:'poach', c:()=>s.lvIdx >= 2 && !s.out, seed:()=>{ s.arc.poach = {};
+    ask('天价挖角', '竞对的 HR 直接给你开了两倍年包，条件是“下个月就到岗”。你签过竞业协议。', [
+      {t:'跳！', f:()=>{ s.arc.poach.go = true; const of = genOffer(1.5); joinCompany(of); L('你在离职交接表上签完字，没有回头。', fx({san:4})); }},
+      {t:'拿着 offer 找老板谈', f:()=>{ s.mult = r1(s.mult * 1.2); L('老板沉默了十秒：“涨 20%，留下。”', fx({boss:-6})); }},
+      {t:'拒绝', f:()=>L('你说你还想把手上的项目做完。老板听说后，在周会上点名表扬了你。', fx({boss:8}))}]);
+    later(rnd(3,5), () => {
+      if(!s.arc.poach.go) return;
+      if(chance(.5)){ const v = rnd(40,120); TW(`前司的律师函寄到了家里：违反竞业协议，索赔 ${v} 万。你在法庭上见到了以前一起加班的同事，他是证人。`, fx({money:-v,san:-12}), 'bad'); }
+      else TW('前司没有追究——因为你原来那条业务线整个被砍了，当年留下的人全被裁了。你在群里看着大家互相道别。', fx({san:6}), 'good');
+    }, true);
+  }},
+  {k:'acq', c:()=>!s.out && s.biz.filter(b=>!b.dead).length >= 2, seed:()=>{ const bn = s.biz[s.bizIdx].n; s.arc.acq = {};
+    TW(`周一早上的全员信：「${bn}」业务被整体出售给另一家公司，所有人三十天内做出选择。`, '', 'bad');
+    ask('业务被卖了', `你所在的「${bn}」要被打包卖掉了。`, [
+      {t:'跟着业务走', sub:'换一家公司，职级平移', f:()=>{ s.arc.acq.go = true; const of = genOffer(1.05); joinCompany(of); L('你的工牌换了一个颜色，坐的还是原来那个工位。'); }},
+      {t:'内部转岗留下', f:()=>{ const old = s.bizIdx; let j = s.biz.findIndex((b,i) => i !== old && !b.dead); s.biz[old].dead = true; s.bizIdx = j; s.boss = rnd(40,52); L(`你抢到了「${s.biz[j].n}」最后一个 HC。`, fx({san:-4})); }},
+      {t:'拿 N+1 走人', f:()=>leaveMenu('laid')}]);
+    later(rnd(5,8), () => {
+      if(!s.arc.acq.go) return;
+      if(chance(.5)){ TW('新东家把你们团队当成了收购的核心资产。整合完成后，你被提拔了。', '', 'good'); if(s.lvIdx < s.comp.exec - 1) promote(); }
+      else { TW('并购整合完成。新东家宣布“团队融合”，你们被并入了一个更大的部门——然后被“优化”了。', '', 'bad'); leaveMenu('laid'); }
+    }, true);
+  }},
+  {k:'collapse', c:()=>!s.out && (s.comp.unicorn || s.comp.tag === '二线' || s.comp.spinoff), seed:()=>{ s.arc.collapse = {};
+    ask('工资晚发了', '这个月的工资晚发了两周。HR 说是“系统升级”。茶水间里，有人在偷偷投简历。', [
+      {t:'赶紧找下家', f:()=>{ const of = genOffer(.95); offerAsk(of, '提前上岸', `你很快拿到了 ${of.c.n} 的 offer。`); }},
+      {t:'再等等，相信公司', f:()=>{ s.arc.collapse.stay = true; L('你在群里回了一句“相信公司”。'); }}]);
+    later(rnd(3,4), () => {
+      if(!s.arc.collapse.stay) return;
+      if(chance(.5)){ TW('周五晚上，CEO 发了一封很长的邮件。公司资金链断了，所有人原地解散。', '', 'bad'); end('bankrupt'); }
+      else { const v = r1(curPay()*.5); TW(`公司在最后一刻拿到了救命的融资。留下来的人，每人发了一笔留任奖金。`, fx({money:v,boss:15,san:6}), 'good'); }
+    });
+  }},
+  {k:'sideproj', c:()=>!s.out && s.abi >= 55, seed:()=>{ s.arc.side = {};
+    ask('周末写的小工具', '你周末写了个内部小工具，帮全组省掉了每天一小时的手工活。有人说可以推广到全公司。', [
+      {t:'继续打磨，推广出去', sub:'接下来会很累', f:()=>{ s.arc.side.go = true; L('你把它做成了一个正经的产品，晚上十二点还在回用户的反馈。', fx({hp:-5,san:-2,net:3})); }},
+      {t:'自己用用就行', f:()=>L('你把它丢在了个人仓库里。', fx({san:2}))}]);
+    later(rnd(6,10), () => {
+      if(!s.arc.side.go) return;
+      TW('CEO 在全员大会上演示了一个工具，台下掌声雷动——是你写的那个。会后它被立项成了新业务，你被任命为负责人。', '', 'good milestone');
+      s.biz.push({n:'内部工具产品化', st:2, tr:.2, eq:0, dead:false}); s.bizIdx = s.biz.length - 1; s.boss = 75;
+      if(s.lvIdx < s.comp.exec - 1) promote();
+    });
+  }},
+  {k:'cover', c:()=>!!curF(), seed:()=>{ const f = curF(), n = ffName(f); s.arc.cover = {n};
+    ask('深夜的电话', `${n}深夜打来电话：上线出了事故，丢了一个大客户的数据。“求你，帮我把锅分一半。”`, [
+      {t:'帮他扛', sub:'你会背一口锅', f:()=>{ s.arc.cover.helped = true; s.blame++; s.blameAt = s.turn; L(`复盘会上，你说那个配置是你改的。${n}在桌子底下攥紧了拳头。`, `背锅 ${s.blame}/3 · ` + fx({boss:-6})); }},
+      {t:'劝他自己认', f:()=>L(`你说：“认了吧，早认早结束。”电话那头很久没说话。`, fx({san:-3}))}]);
+    later(rnd(6,10), () => {
+      const c = s.arc.cover;
+      if(c.helped){ s.flags.shield = true; TW(`裁员名单定稿的前一天，${n}把你叫到楼梯间：“你在名单上。我帮你抢了一个内部转岗名额，今天就签。”`, '躲过下一次裁员', 'good'); s.bizIdx = bestBiz(); }
+      else if(chance(.5)) TW(`${n}后来被开了。一年后你在一家公司面试，推门进去，面试官就是${n}。`, fx({san:-6}), 'bad');
+      else TW(`${n}后来跟你说：“谢谢你那天没帮我。自己认下来以后，我才真的长大了。”`, fx({net:5,san:4}), 'good');
+    }, true);
+  }},
+  {k:'aiwave', c:()=>!s.out, seed:()=>{ s.arc.ai = {};
+    ask('AI 提效试点', '公司要求所有团队用 AI 提效 50%，你被点名牵头试点。干好了是标杆，干砸了是背锅。', [
+      {t:'牵头干', f:()=>{ s.arc.ai.lead = true; L('你连续三周泡在提示词和工作流里，把组里的流程重写了一遍。', fx({hp:-3,abi:4})); }},
+      {t:'推给别人', f:()=>{ s.arc.ai.lead = false; L('你说手上的项目太忙，推荐了隔壁组的同事。', fx({boss:-4})); }}]);
+    later(rnd(6,10), () => {
+      if(s.arc.ai.lead){ TW('试点成了全公司的标杆案例。新成立的 AI 中台点名要你过去当负责人。', '', 'good'); s.bizIdx = bestBiz(); if(s.lvIdx < s.comp.exec - 1) promote(); }
+      else if(chance(.5)){ TW('试点跑通了。第二个月，你们组砍掉了一半的人——你在名单上。', '', 'bad'); leaveMenu('laid'); }
+      else { s.aiRisk = true; TW('试点跑通了，隔壁组的同事被提拔成了负责人。你们组的 HC 被冻结，新需求全交给了 AI。', fx({san:-6}), 'bad'); }
+    });
+  }},
+  {k:'checkup', c:()=>s.age >= 27, seed:()=>{ s.arc.check = {};
+    ask('体检报告', '体检报告上多了一行字：“建议三个月内专科复查”。这阵子正好是项目最忙的时候。', [
+      {t:'请假去复查', f:()=>{ s.arc.check.go = true; L('你请了半天假。老板回了一个“好”，后面没有表情。', fx({qmod:-3})); }},
+      {t:'忙完这阵再说', f:()=>{ s.arc.check.go = false; L('你把报告塞进了抽屉。'); }}]);
+    later(rnd(4,6), () => {
+      if(s.arc.check.go) L('复查结果出来了：问题不大，但医生说幸好来得早。你把作息表贴在了显示器上。', fx({hp:8,san:3}), 'good');
+      else TW('那天开着会，你突然眼前一黑，被同事送去了急诊。医生看着你的体检记录，问你为什么拖了这么久。', fx({hp:-30,san:-10}), 'bad');
+    });
+  }},
+];
+// 每隔一段时间开启一条新故事线；保证每段大厂人生至少有一两次大转折
+function arcTick(){
+  if(s.out && !s.arc) return false;
+  if(s.over || s.unemployed || s.chapter || s.queue.length) return false;
+  if(!s.arc) s.arc = {done:[], last: -2};
+  const gap = s.turn - s.arc.last;
+  if(gap < 5) return false;
+  if(!chance(gap >= 9 ? .8 : .35)) return false;
+  const pool = ARCS.filter(a => !s.arc.done.includes(a.k) && (!a.c || a.c()));
+  if(!pool.length) return false;
+  const a = pick(pool); s.arc.done.push(a.k); s.arc.last = s.turn; a.seed();
+  return true;
+}
+// 平淡的季度合并成一行，转折更集中
+function quietMerge(){
+  if(s.qHead == null || s.log.length - 1 !== s.qHead) return;
+  const h = s.log[s.qHead], prev = s.log[s.qHead - 1];
+  if(prev && prev.quiet){
+    prev.text = `${prev.y0} 年 Q${prev.q0} – ${s.year} 年 Q${s.q} · 风平浪静`; s.log.pop();
+    if(HAS_DOM){ const el = $('log'); if(el.lastChild) el.removeChild(el.lastChild); if(el.lastChild){ const x = el.lastChild.querySelector('.x'); if(x) x.textContent = prev.text; } }
+  } else {
+    h.quiet = true; h.y0 = s.year; h.q0 = s.q; h.text += ' · 风平浪静';
+    if(HAS_DOM){ const el = $('log').lastChild; if(el){ const x = el.querySelector('.x'); if(x) x.textContent = h.text; } }
+  }
+  s.qHead = null;
 }
 
 /* ============ 主动行动 ============ */
@@ -2515,6 +2692,7 @@ function endChapter(tier){
 /* ============ 人生回放：从日志里挑出高光时刻 ============ */
 const HL_RULES = [
   [l => l.t === '结局', '🏁'],
+  [l => l.t === '转折', '⚡'],
   [l => l.t === '入职', '🏢'],
   [l => l.t === '新篇章', '🧭'],
   [l => /milestone/.test(l.cls) && !/上市了|一号工程/.test(l.text), '✨'],

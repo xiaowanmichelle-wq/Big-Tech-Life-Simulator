@@ -1640,7 +1640,7 @@ const QUOTES = {
 const CH_TITLES = {
   civil:[['上岸','考公上岸',c=>c.data.in], ['笔杆子','在单位里写出了名堂',(c,t)=>t==='good']],
   shop:[['咖啡店主','开过一家咖啡店',()=>true], ['连锁老板','咖啡店开出了分店',(c,t)=>t==='good']],
-  blogger:[['前大厂博主','做过博主',()=>true], ['五十万粉丝','粉丝涨到五十万',c=>c.data.fans>=50]],
+  blogger:[['前大厂博主','做过博主',()=>true], ['爆款制造机','做出过两条爆款视频',c=>(c.data.viral||0)>=2], ['百万粉丝','粉丝涨到一百万',c=>c.data.fans>=100]],
   startup:[['创业者','拉着前同事创过业',()=>true], ['对赌人生','签过对赌条款',c=>c.data.bet], ['B 轮掌舵人','公司拿到 B 轮',(c,t)=>t==='good']],
   home:[['回乡青年','回了老家',()=>true], ['小城院子','在老家过上惬意日子',(c,t)=>t==='good']],
   soe:[['国企人','去了国企',()=>true], ['国企一把手','在国企当上负责人',(c,t)=>t==='good']],
@@ -1819,7 +1819,9 @@ CH.blogger = {
   intro:c=>'你买了一盏补光灯，把出租屋的一面墙刷成了白色。第一条视频拍了二十遍。',
   start:c=>{ c.data.fans = r1(Math.max(.1, (c.score-30)/40)); },
   income:c=> r1(c.data.fans*.12 - .3),
-  drift:c=>{ const g = Math.max(-.08, (c.score-45)/160 + {juan:.08,normal:.05,moyu:.01}[s.strat] + rf(-.05,.12)); c.data.fans = r1(Math.max(.05, c.data.fans*(1+g) + .5)); },
+  drift:c=>{ const g = Math.max(-.08, (c.score-45)/150 + {juan:.07,normal:.05,moyu:.01}[s.strat] + rf(-.05,.12)); c.data.fans = r1(Math.max(.05, c.data.fans*(1+g) + .6));
+    if(c.q >= 2 && chance(clamp((c.score-35)/400 + (s.strat==='juan'?.04:0), .02, .14))){ const m = rf(1.5,2.4); c.data.fans = r1(c.data.fans*m + 3); c.data.viral = (c.data.viral||0)+1;
+      L(pick(['你的一条视频被平台推上了热门，一夜之间评论破万。','一位大 V 转发了你的视频，私信多到看不完。','你随手拍的一条“下班后的大厂园区”火了，播放量破了千万。']), `粉丝涨到 ${c.data.fans} 万`, 'good'); } },
   metric:c=>`粉丝 ${c.data.fans} 万`,
   events:[
     {t:'选题', d:'后台有人问：“能讲讲你们公司的内幕吗？”', o:[
@@ -1839,7 +1841,7 @@ CH.blogger = {
       ['休息一阵', '', c=>{ fx({san:8}); c.data.fans = r1(c.data.fans*.9); L('你停更了一个月，去爬了趟山。'); }]]},
     {c:c=>s.friends && s.friends.length, auto:c=>{ const f = s.friends[0]; c.data.fans = r1(c.data.fans*1.1 + .5); L(`${f.p.name}在朋友圈转发了你的视频：“我发小，关注一下。”`, fx({san:3})); }},
   ],
-  tier:c=> c.data.fans >= 30 ? 'good' : c.data.fans >= 9 ? 'mid' : 'bad',
+  tier:c=> c.data.fans >= 60 ? 'good' : c.data.fans >= 12 ? 'mid' : 'bad',
   ends:{
     good:['博主·大 V', c=>`你的粉丝涨到了 ${c.data.fans} 万，还出了一本书，叫《大厂生存不过一场游戏》。签售会上有人说，是看了你的视频才敢辞职的。`],
     mid:['博主·小有名气', c=>`你有 ${c.data.fans} 万粉丝，不算大号，但接广告的钱够付房租。你说这是你做过最自由的工作。`],

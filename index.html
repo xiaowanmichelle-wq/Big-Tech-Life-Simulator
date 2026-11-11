@@ -59,6 +59,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .gallery .g.hint{border-style:dashed;font-size:12px}
 .gallery .tcat{margin:8px 0 2px;font-size:12px}
 .lifebtn{width:100%;margin:2px 0 14px}
+.dailybtn{width:100%;margin:0 0 14px;border-color:var(--red);color:var(--red)}
 .sting{font-family:var(--serif,"Noto Serif SC",serif);font-weight:700;font-size:18px;color:var(--red);margin:10px 0 4px;line-height:1.5}
 .persona{border:1px solid var(--ink);padding:10px 12px;margin:10px 0;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:baseline}
 .persona small{grid-column:1/3;color:var(--mute);font-size:12px}
@@ -209,6 +210,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
       <div class="sub">你是数百万互联网打工人中的一个 · 从入职那天开始，按季度活下去</div>
     </div>
     <div class="chal" id="chal" hidden></div>
+    <div id="daily"></div>
     <div class="chal" id="d11" hidden><b>限时 · 双十一</b>（11 月 1 日 – 15 日）<br>本期新增大促作战室、凑满减、光棍节联谊等限时事件，还有两个限定称号。</div>
     <div class="odds" id="odds"></div>
     <div class="card" id="rollcard"></div>
@@ -253,7 +255,8 @@ const HAS_DOM = typeof document !== 'undefined';
 const STORE = (typeof wx !== 'undefined' && wx.getStorageSync)
   ? {getItem:k=>{ try{ return wx.getStorageSync(k) || null; }catch(e){ return null; } }, setItem:(k,v)=>{ try{ wx.setStorageSync(k,v); }catch(e){} }}
   : {getItem:k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } }, setItem:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} }};
-const R = () => Math.random();
+let SEED_RNG = null; // 每日开局：用日期做种子，同一天所有人抽到同一个开局
+const R = () => SEED_RNG ? SEED_RNG() : Math.random();
 const rnd = (a,b) => a + Math.floor(R()*(b-a+1));
 const rf = (a,b) => a + R()*(b-a);
 const pick = a => a[Math.floor(R()*a.length)];
@@ -452,6 +455,15 @@ function fest(k){ const f = curFest(); return !!f && f.k === k; }
 function isD11(){ return fest('d11'); }
 function bigSale(){ return (fest('d11') && s.q === 4) || (fest('618') && s.q === 2); }
 function isEcom(){ return (typeof ECOM !== 'undefined' && ECOM.includes(s.comp.id)) || /电商/.test(s.comp.n) || /电商|淘宝|零售|物流|买菜/.test((s.biz[s.bizIdx]||{}).n || ''); }
+function dailyKey(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function dailyLabel(k){ const p = (k || dailyKey()).split('-'); return `${+p[1]} 月 ${+p[2]} 日`; }
+function dailyRoll(){
+  const key = dailyKey(); let h = 2166136261;
+  for(const ch of 'dachang-daily-' + key){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  let a = h >>> 0;
+  SEED_RNG = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  try{ const r = roll(); r.daily = key; return r; } finally { SEED_RNG = null; }
+}
 function roll(){
   let odds = 1;
   const ep = (list,x,wf=y=>y.w) => wf(x) / list.reduce((a,y)=>a+wf(y),0);
@@ -512,7 +524,7 @@ function startGame(r){
     if(r.rare.key==='genius'){ s.abi = 93; s.lvIdx = Math.min(c.exec-2, s.lvIdx+2); s.mult = 1.4; s.san -= 10; s.out=false; }
     if(r.rare.key==='vet'){ s.age = s.startAge = 33; s.lvIdx = c.exec-2; s.money += 380; s.abi = 80; s.hair = 45; s.hp -= 10; s.out=false; }
   }
-  s.rollCode = rollCode(r); s.chal = CHAL && CHAL.code === s.rollCode ? {e:CHAL.e} : null;
+  s.rollCode = rollCode(r); s.daily = r.daily || null; s.chal = CHAL && CHAL.code === s.rollCode ? {e:CHAL.e} : null;
   s.cohort = makeCohort(); s.friends = []; s.others = [];
   if(HAS_DOM){ $('log').innerHTML=''; }
   log('入职', `你加入了${c.n}，${s.out?'身份是外包驻场':`职级 ${lvLabel()}（共 ${c.lv.length} 档，升到 ${c.lv[c.exec]} 算进入高管层）`}，分到「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}），岗位是${s.role.n}。`, 'head');
@@ -1867,7 +1879,7 @@ function end(k){
   s.quote = pick(QUOTES[e.t]);
   const bonus = {good:15, mid:5, bad:-5, hidden:10}[e.t];
   const sc = Math.log10(1+Math.max(0,s.money+invTotal()))*18 + (s.out?0:s.lvIdx/s.comp.exec)*30 + s.hp*.1 + s.san*.1 + bonus;
-  s.pct = clamp(Math.round(sc*1.05), 1, 99);
+  s.pct = clamp(Math.round(sc*1.05), 1, 99); s.score = Math.round(sc*10)/10;
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
   s.persona = persona(); s.sting = stingLine();
@@ -2555,8 +2567,12 @@ function render(){
 }
 
 let curRoll = null;
-function showRoll(fromChal){
-  curRoll = (fromChal && CHAL && rollFromCode(CHAL.code)) || roll(); if(!fromChal) CHAL = null; const r = curRoll;
+function showRoll(fromChal, daily){
+  curRoll = (fromChal && CHAL && rollFromCode(CHAL.code)) || (daily ? dailyRoll() : roll()); if(!fromChal) CHAL = null; const r = curRoll;
+  $('daily').innerHTML = r.daily ? `<b>今日开局 · ${dailyLabel(r.daily)}</b><br>今天所有人都抽到这个开局，看看你能走出什么样的人生。点“重新投胎”换回随机开局。`
+    : `<button class="btn dailybtn" id="dailybtn">今日开局 · ${dailyLabel()}：所有人同一个开局 ›</button>`;
+  $('daily').className = r.daily ? 'chal' : '';
+  if(!r.daily) $('dailybtn').onclick = () => { showRoll(false, true); window.scrollTo(0, 0); };
   $('chal').hidden = !CHAL;
   const fe = curFest(); $('d11').hidden = !fe;
   if(fe) $('d11').innerHTML = `<b>限时 · ${fe.n}</b>（${fe.range}）<br>本期新增限时事件：${fe.d}，还有限定称号可以解锁。`;
@@ -2588,7 +2604,7 @@ function showEnding(){
   const cls = e.t==='good'?'good':e.t==='bad'?'bad':'mid';
   const kind = {good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t];
   const pe = s.persona || persona(), rt = rarestTitle(), er = endRarity();
-  $('ending').innerHTML = `<div class="ec"><div class="kind">${kind}${er ? ` · ${er} 的人生走到这里` : ''}</div><h2 class="${cls}">${e.n}</h2>
+  $('ending').innerHTML = `<div class="ec"><div class="kind">${s.daily ? `今日开局 · ${dailyLabel(s.daily)} · ` : ''}${kind}${er ? ` · ${er} 的人生走到这里` : ''}</div><h2 class="${cls}">${e.n}</h2>
     <div class="story">${endText(s.ending)}</div>
     <div class="sting">${s.sting || stingLine()}</div>
     <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
@@ -2663,7 +2679,7 @@ function showLives(){
 }
 function shareText(){
   const e = ENDINGS[s.ending];
-  return `我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，职场人格是「${(s.persona||persona()).n}」，称号：${titles().join('、')}。${s.sting || stingLine()}${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
+  return `${s.daily ? `【今日开局 · ${dailyLabel(s.daily)}】` : ''}我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，职场人格是「${(s.persona||persona()).n}」，称号：${titles().join('、')}。${s.sting || stingLine()}${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
 }
 function wrap(x, text, maxW){
   const lines = []; let cur = '';
@@ -2683,7 +2699,7 @@ async function showShare(){
   x.fillStyle = mute; x.font = `15px ${sans}`; x.textAlign = 'right'; x.fillText(`${s.year} 年 · ${s.age} 岁`, W-P, y); x.textAlign = 'left';
   y += 22; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 2);
   const er = endRarity(), pe = s.persona || persona(), sting = s.sting || stingLine();
-  y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText({good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t] + (er ? ` · ${er} 的人生走到这里` : ''), P, y);
+  y += 54; x.fillStyle = mute; x.font = `16px ${sans}`; x.fillText((s.daily ? `今日开局 · ${dailyLabel(s.daily)} · ` : '') + {good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t] + (er ? ` · ${er} 的人生走到这里` : ''), P, y);
   y += 78; x.fillStyle = col; let fs = 72; x.font = `900 ${fs}px ${serif}`; while(fs > 36 && x.measureText(e.n).width > W-2*P){ fs -= 4; x.font = `900 ${fs}px ${serif}`; } x.fillText(e.n, P, y);
   y += 44; x.fillStyle = ink; x.font = `18px ${sans}`; x.fillText(`${s.comp.n} · ${s.role.n} · ${lvLabel()}`, P, y);
   y += 40; x.font = `19px ${sans}`; x.fillStyle = '#3a352d';

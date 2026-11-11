@@ -1846,7 +1846,7 @@ function hobbyTick(){
 }
 
 /* ============ 宠物 ============ */
-const PETN = {'猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐'], '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐']};
+const PETN = {'猫':['橘子','煤球','年糕','汤圆','布丁','芝麻','可乐','奶茶','咪咪','雪球','花卷','小鱼干'], '狗':['旺财','豆包','土豆','小白','大黄','球球','可乐','馒头','来福','阿黄','饺子','栗子']};
 function birthEvent(){
   const f = s.gender === 'f';
   s.flags.preg = false; s.flags.kid = true;
@@ -1864,12 +1864,16 @@ function birthEvent(){
 }
 function petMenu(){
   const o = [];
-  for(const p of s.pets){
+  if(s.pets.length > 2){
+    const dogs = s.pets.some(p => p.type === '狗');
+    o.push({t:`陪 ${s.pets.length} 只毛孩子一起玩`, sub: dogs ? '健康和精神都会好一点' : '精神会好一些', f:()=>{ L(pick([`你坐在地板上，${s.pets.map(p=>p.name).join('、')}轮流过来蹭你。`, `你买了一大袋零食，家里瞬间变成了游乐场。`, `你带着它们拍了一张全家福，发了朋友圈，收获了 87 个赞。`]), fx({san:7, hp: dogs ? 3 : 0, money:-.5}), 'pet'); }});
+    o.push({t:'带它们去体检洗澡', sub:`约 ${r1(s.pets.length*.8)} 万`, f:()=>{ s.pets.forEach(p => p.next = s.turn + 3); L('宠物医院的前台看到你，说：“又是你啊，办张会员卡吧。”', fx({san:3,money:-r1(s.pets.length*.8)}), 'pet'); }});
+  } else for(const p of s.pets){
     if(p.type === '狗') o.push({t:`带「${p.name}」去公园撒欢`, sub:'健康和精神都会好一点', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你带${p.name}去公园跑了一大圈，它把一只飞盘叼回来七次。`,`${p.name}在草地上打滚，你坐在长椅上，第一次觉得周末这么长。`,`你和${p.name}去爬了山，它在山顶对着远处叫了三声。`]), fx({hp:4,san:5,money:-.2}), 'pet'); }});
     else o.push({t:`陪「${p.name}」玩逗猫棒`, sub:'精神会好一些', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你陪${p.name}玩了一晚上逗猫棒，它最后跳上你的键盘睡着了。`,`${p.name}趴在你腿上打呼噜，你没有打开电脑。`,`你给${p.name}买了个新猫爬架，它更喜欢装猫爬架的那个纸箱。`]), fx({san:6,money:-.3}), 'pet'); }});
     o.push({t:`带「${p.name}」去体检洗澡`, sub:'花点钱，它会更健康', f:()=>{ p.bond = (p.bond||0) + 1; p.next = s.turn + 3; L(`${p.name}洗完澡香喷喷的，医生说它很健康。`, fx({san:3,money:-.8}), 'pet'); }});
   }
-  if(s.pets.length < 2){
+  {
     o.push({t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>{ const n = adoptPet('猫'); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); }});
     o.push({t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>{ const n = adoptPet('狗'); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); }});
   }
@@ -1878,7 +1882,8 @@ function petMenu(){
 }
 function adoptPet(type){
   const names = PETN[type].filter(n => !s.pets.some(p=>p.name===n));
-  const name = pick(names.length ? names : PETN[type]);
+  let name = names.length ? pick(names) : pick(PETN[type]) + '二世';
+  while(s.pets.some(p => p.name === name)) name += '二世';
   s.pets.push({type, name, since:s.turn, next:s.turn+rnd(2,3)});
   return name;
 }
@@ -1887,9 +1892,11 @@ const PET_TXT = {
   '狗':[n=>`周末带${n}去公园，它追了一下午飞盘，你也跑出了一身汗。`, n=>`${n}把你的拖鞋咬坏了，然后用无辜的眼神看着你。`, n=>`下班回家，${n}兴奋得原地转了五圈。`, n=>`${n}学会了握手。你录了视频发朋友圈，${s.st.promos>0?'点赞比你晋升那条还多':'成了你朋友圈有史以来点赞最多的一条'}。`, n=>`下雨天遛${n}遛了一身泥，但心情出奇地好。`, n=>`你心情不好的那天晚上，${n}一直趴在你脚边。`, n=>`早上六点半，${n}准时把你舔醒。你第一次在上班前看到了日出。`, n=>`${n}在小区里交到了新朋友，是隔壁楼的一只柯基。`, n=>`你带${n}去宠物店洗澡，它全程用委屈的眼神看着你。`, n=>`周末你带${n}去郊外爬山，它比你先登顶。`, n=>`你出差三天回来，${n}扑上来的那一刻，你差点哭了。`],
 };
 function petTick(){
-  for(const p of s.pets){
-    s.san = clamp(s.san + 1.2);
-    if(p.type==='狗') s.hp = clamp(s.hp + .8);
+  if(s.pets.length >= 4 && chance(.08)) log('', pick([`家里现在有 ${s.pets.length} 只毛孩子。房东来收房租时，在门口站了很久。`, `你每天下班先铲屎，再喂饭，最后才轮到自己吃饭。`, `${s.pets.length} 只宠物一起在门口迎接你，像一支欢迎仪仗队。`]), 'pet', fx({san:2,money:-.5}));
+  s.pets.forEach((p, i) => {
+    const k = i < 2 ? 1 : .25; // 多养的宠物也会陪你，但“治愈效果”不会无限叠加
+    s.san = clamp(s.san + 1.2 * k);
+    if(p.type==='狗') s.hp = clamp(s.hp + .8 * k);
     s.money = r1(s.money - .25);
     if(s.turn >= p.next){
       p.next = s.turn + rnd(2,3);
@@ -1904,7 +1911,7 @@ function petTick(){
         log('', PET_TXT[p.type][i](p.name), 'pet', fx({san:rnd(3,5)}));
       }
     }
-  }
+  });
 }
 
 /* ============ 投资 ============ */
@@ -2149,7 +2156,7 @@ function titleDex(){
     ['职场','跳槽达人','待过三家公司'], ['职场','活水之王','转岗两次'], ['职场','一号工程元老','赶上公司的一号工程'],
     ['职场','绩效守门员','两次拿到垫底绩效'], ['职场','顶格绩效传说','三次拿到顶格绩效'], ['职场','仲裁赢家','劳动仲裁打赢了'],
     ['职场','地中海','头发所剩无几'], ['职场','普通打工人','什么称号都没拿到'],
-    ['生活','房奴','买了房'], ['生活','奶爸奶妈','有了孩子'], ['生活','猫奴','养了一只猫'], ['生活','狗爸狗妈','养了一只狗'], ['生活','猫狗双全','猫和狗都养了'],
+    ['生活','房奴','买了房'], ['生活','奶爸奶妈','有了孩子'], ['生活','猫奴','养了一只猫'], ['生活','狗爸狗妈','养了一只狗'], ['生活','猫狗双全','猫和狗都养了'], ['生活','动物园园长','同时养 5 只宠物'],
     ['理财','股神','投资累计赚 200 万'], ['理财','被割过的韭菜','亏了很多钱，或者被骗过'], ['理财','A 股贡献者','在 A 股亏了三年'], ['理财','三千点守望者','持有 A 股满八年'],
   ];
   SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
@@ -2176,7 +2183,7 @@ function titles(){
   if((s.st.pnl||0) <= -50 || (s.st.scam||0) >= 1) t.push('被割过的韭菜');
   if((s.st.aLoss||0) >= 3) t.push('A 股贡献者');
   if((s.st.aYears||0) >= 8) t.push('三千点守望者');
-  if(s.pets.length) t.push(s.pets.length>=2 ? '猫狗双全' : (s.pets[0].type==='猫'?'猫奴':'狗爸狗妈'));
+  if(s.pets.length){ const cat = s.pets.some(p=>p.type==='猫'), dog = s.pets.some(p=>p.type==='狗'); t.push(cat && dog ? '猫狗双全' : cat ? '猫奴' : '狗爸狗妈'); if(s.pets.length >= 5) t.push('动物园园长'); }
   for(const a of TRAVEL_ACH) if((s.ach||[]).includes(a.k)) t.push(a.n);
   for(const a of s.sAch) t.push(a);
   if(s.st.arb) t.push('仲裁赢家');

@@ -629,7 +629,7 @@ function nextQuarter(){
   if(s.comp.spinoff && s.spin) spinTick();
   if(s.over) return render();
   if(!arcTick() || chance(.5)) randomEvents();
-  familyTick(); maxCheck(); sanStreak(); eggCheck();
+  familyTick(); maxCheck(); sanStreak(); eggCheck(); warnCheck();
   if(s.queue.length) s.pendingFinish = true; else finishQuarter();
   render();
 }
@@ -707,12 +707,28 @@ function finishQuarter(){
   if(!s.over && !s.unemployed && !s.queue.length) quietMerge();
 }
 
+// 坏结局前的预警：给玩家一次挽回的机会
+function warnCheck(){
+  if(!s || s.over || s.unemployed) return;
+  const w = s.flags.warn = s.flags.warn || {};
+  if(s.hp > 40) w.hp = false; if(s.san > 40) w.san = false; if(s.moyu < 20) w.moyu = false;
+  if(s.hp <= 15 && !w.hp){ w.hp = true; ask('身体在报警', '你在会议室里突然眼前一黑。醒来时，同事们正围着你。医生说：“你必须停下来。”', [
+    {t:'休一个长病假', sub:'健康和精神恢复，本季表现大幅下降', f:()=>L('你休了两个月病假，每天散步、早睡。回来时，项目已经交给了别人。', fx({hp:25,san:8,qmod:-15,money:-2}))},
+    {t:'先扛过这个项目', sub:'健康再见底就会出事', f:()=>L('你吃了两片药，回到了工位。下一次，可能就没有提醒了。', '', 'warn')}]); }
+  else if(s.san <= 15 && !w.san){ w.san = true; ask('情绪在报警', '周一早上，你坐在地铁站的长椅上，看着一班又一班车开走，怎么也站不起来。', [
+    {t:'请几天假，去看心理咨询', sub:'精神恢复，本季表现下降', f:()=>L('咨询师听你说了很久。你第一次承认，自己真的累了。', fx({san:22,qmod:-6,money:-.5}))},
+    {t:'深呼吸，继续硬撑', sub:'精神再见底就会撑不住', f:()=>L('你擦了擦脸，走进了下一班车厢。下一次，可能就没有提醒了。', '', 'warn')}]); }
+  else if(s.blame === 2 && !w.blame){ w.blame = true; log('', '这是你背的第二口锅。再有一次，你就会成为整件事的替罪羊。', 'warn'); }
+  else if(s.moyu >= 30 && !w.moyu){ w.moyu = true; ask('老板约你喝咖啡', '老板搅着咖啡说：“你最近的状态……我有点担心。”', [
+    {t:'打起精神，好好干一阵', sub:'策略改为“正常”', f:()=>{ s.strat = 'normal'; s.moyu = 0; L('你把摸鱼的网页都关了。老板在周会上说你“最近状态回来了”。', fx({boss:4})); }},
+    {t:'“我心里有数”', sub:'继续摸下去会有后果', f:()=>L('老板点点头，没再说什么。你觉得他心里也有数了。', fx({boss:-4}), 'warn')}]); }
+}
 function endChecks(){
   if(s.hp <= 0){ end('health'); return true; }
   if(s.san <= 0){ end('burnout'); return true; }
   if(s.blame >= 3){ end('blame'); return true; }
   if(s.moyu >= 40){ end('moyu'); return true; }
-  if(s.age >= 60){ end(s.comp.foreign ? 'foreign' : 'fossil'); return true; }
+  if(s.age >= 60){ end(s.flags.execCont && !s.flags.sidelined ? 'exec' : s.flags.ipoStay ? 'spinoff' : s.comp.foreign ? 'foreign' : 'fossil'); return true; }
   return false;
 }
 
@@ -844,7 +860,9 @@ function promote(){
   s.mult = Math.max(1, s.mult * .95); // 晋升后薪资按新职级重新定档，之前谈下来的溢价部分折算
   const after = curPay();
   L(`晋升成功：${lvLabel()}！年包 ${Math.round(before)} 万 → ${Math.round(after)} 万（+${Math.round((after/before-1)*100)}%）`, fx({san:8,net:3}), 'good');
-  if(s.lvIdx >= s.comp.exec) end('exec');
+  if(s.lvIdx >= s.comp.exec && !s.flags.execCont) ask('任命邮件', `全员邮件发出来了：你被任命为${lvLabel()}，进入公司高管层。接下来呢？`, [
+    {t:'在巅峰时体面离开', sub:'结局：登顶高管', f:()=>{ L('你在最风光的时候递了辞呈。告别饭上，很多人说“你走得太早了”。你觉得刚刚好。'); end('exec'); }},
+    {t:'继续干下去', sub:'高管的风险也更大', f:()=>{ s.flags.execCont = true; L('你搬进了带窗户的办公室。日程表从此按 15 分钟一格排满。', fx({san:-3})); }}]);
 }
 
 /* ============ 裁员 / 离职 ============ */
@@ -994,7 +1012,11 @@ function spinTick(){
   }
   if(sp.round >= 3 && sp.val >= 1.5 && chance(.15)){
     s.spinPay = r1(sp.grant*sp.val*rf(2,3.5)); s.money = r1(s.money+s.spinPay); s.spinEnd = 'ipo';
-    log('', `公司上市了！敲钟那天，你站在第二排。股份解禁后套现约 ${s.spinPay} 万。`, 'good'); end('spinoff'); return;
+    log('', `公司上市了！敲钟那天，你站在第二排。你的股份价值约 ${s.spinPay} 万。`, 'good');
+    ask('敲钟之后', '庆功宴散场后，你一个人在楼下站了很久。', [
+      {t:'解禁后套现，开始新生活', sub:'结局：分拆独立', f:()=>end('spinoff')},
+      {t:'留下来，看它能走多远', f:()=>{ s.flags.ipoStay = true; s.spin = null; L('你把股份留着，第二天照常九点到了公司。上市公司的季度财报，比创业时的融资还让人紧张。', fx({san:-2})); }}]);
+    return;
   }
   if(sp.round >= 1 && sp.val >= 1.2 && chance(.03)){
     ask('收购要约', `${pick(C.filter(c=>c.id!==sp.parent.id)).n} 想收购你们，按当前估值溢价 30%。`, [
@@ -1434,6 +1456,15 @@ const JARGON = [
   ['老板拍拍你的肩：“你还年轻，多学习。”', '这次的名额给了别人'],
   ['新老板说：“有问题随时找我。”', '请先自己解决'],
 ];
+const EXEC_EVENTS = [
+ {w:()=>s.flags.execCont?2.5:0, cd:8, f:()=>ask('新 CEO 上任', '集团换了 CEO。第一次高管会上，他说：“我们要打破山头。”', [
+   {t:'主动约他汇报你的业务', f:()=>chance(.55) ? L('他听完说：“你这块我放心。”', fx({boss:8,san:-2}), 'good') : L('他打断你：“这些数据我看过了。”会后，你的一个团队被划给了别人。', fx({boss:-8,san:-5}), 'warn')},
+   {t:'保持距离，先观察', f:()=>{ if(chance(.3)){ s.flags.sidelined = true; L('三个月后的组织调整里，你被任命为“战略顾问”。会议邀请少了一半。', fx({san:-8}), 'warn'); } else L('风声过去了，你的位置没动。', fx({san:1})); }}])},
+ {w:()=>s.flags.execCont?1.5:0, cd:8, f:()=>ask('重大事故', '你负责的业务出了一次全网级别的事故，舆论发酵了三天。', [
+   {t:'公开站出来担责', f:()=>{ s.blame++; s.blameAt = s.turn; L(`你在全员信里写了“责任在我”。团队私下说你够意思。（第 ${s.blame} 口锅）`, fx({san:-6,net:4}), 'warn'); }},
+   {t:'让下面的负责人出来说明', f:()=>L('事故平息了。那位负责人下个月提了离职，团队里有人不再和你说话。', fx({net:-6,boss:2}))}])},
+ {w:()=>s.flags.execCont?1.2:0, cd:10, f:()=>L(pick(['你的周末被战略会、复盘会和“随便聊聊”填满了。','你在机场贵宾厅里开完了三个会，登机时才想起今天是孩子的家长会。','你已经很久没写过一行代码、画过一张图了。偶尔有点想念。']), fx({san:-3}))},
+];
 const HUMOR_EVENTS = [
   {w:1.3, cd:6, f:()=>{ const j = pick(JARGON.filter(x => !(s.jargonSeen||[]).includes(x[0])).concat(s.jargonSeen && s.jargonSeen.length >= JARGON.length ? JARGON : [])); if(!j) return; (s.jargonSeen = s.jargonSeen || []).push(j[0]); L(j[0], '翻译：' + j[1]); }},
   {w:()=>T()?.8:0, cd:16, f:()=>L('你终于读懂了这段祖传代码。注释里写着：“别动，能跑。”署名是三年前的你。', fx({san:-1}))},
@@ -1716,7 +1747,7 @@ const FAMILY_EVENTS = [
 ];
 
 let EVENTS = null;
-function allEvents(){ if(!EVENTS){ EVENTS = EVENTS_BASE.concat(FRIEND_EVENTS, HUMOR_EVENTS); EVENTS.forEach((e,i) => { e.id = e.id || 'e'+i; }); FAMILY_EVENTS.forEach((e,i) => { e.id = e.id || 'f'+i; }); } return EVENTS; }
+function allEvents(){ if(!EVENTS){ EVENTS = EVENTS_BASE.concat(FRIEND_EVENTS, HUMOR_EVENTS, EXEC_EVENTS); EVENTS.forEach((e,i) => { e.id = e.id || 'e'+i; }); FAMILY_EVENTS.forEach((e,i) => { e.id = e.id || 'f'+i; }); } return EVENTS; }
 function randomEvents(){
   const wf = e => typeof e.w==='function' ? e.w() : e.w;
   const ok = e => {
@@ -2546,7 +2577,7 @@ function stingLine(){
   }
   return c[0][1];
 }
-const RARITY = {"e":{"bankrupt":1.82,"shop_bad":1.31,"farm_good":4.71,"nomad_good":5.34,"soe_good":1.74,"home_mid":6.44,"blogger_mid":6.75,"blogger_bad":0.76,"blogger_good":4.15,"soe_mid":3.5,"shop_good":2.89,"rest_good":4.42,"rest_bad":5.12,"nomad_bad":0.24,"civil_mid":3.17,"nomad_mid":2.56,"shop_mid":2.48,"fish_good":6.05,"fish_mid":4.86,"exec":2.32,"abroad":1.27,"civil_good":4.32,"home_good":4.21,"phd_good":1.39,"rest_mid":2.59,"farm_mid":3.16,"fish_bad":0.63,"soe_bad":0.82,"startup_mid":0.88,"civil_bad":0.24,"startup_good":3.4,"ai_replaced":0.54,"angel":1.04,"noncompete":0.86,"startup_bad":0.71,"home_bad":0.97,"blame":0.1,"farm_bad":0.4,"health":0.03,"fire":0.4,"phd_mid":0.84,"burnout":0.03,"lottery":0.43,"spinoff":0.07,"phd_bad":0.03,"gig_mid":0.01,"foreign":0.01,"fossil":0.01,"moyu":0.01,"gig_good":0.01,"gig_bad":0.01},"t":{"卷王":7.52,"跳槽达人":18.5,"顶格绩效传说":15.68,"单身贵族":16.36,"猫奴":24.54,"旅行爱好者":24.38,"咖啡店主":6.69,"养生系打工人":39.2,"已读不回大师":18.75,"被割过的韭菜":17.51,"新农人":8.26,"数字游民":8.13,"绩效守门员":16.7,"国企人":6.05,"国企一把手":1.74,"飞盘社交达人":2.89,"回乡青年":11.63,"狗爸狗妈":17.52,"前大厂博主":11.65,"租房也要住好点":11.2,"羽球健将":2.86,"合作社带头人":4.23,"一号工程元老":21.38,"百万粉丝":2.71,"梦境客服":8.54,"百公里骑士":2.74,"A 股贡献者":6.03,"活水之王":9.35,"情绪稳定得像个 AI":8.54,"租一辈子也挺好":5.35,"三千点守望者":2.32,"猫狗双全":5.96,"半马完赛":6.35,"冲浪玩家":0.7,"连锁老板":2.89,"不婚主义者":2.71,"间隔年":12.13,"手艺人":3.12,"发量富翁":3.98,"上岸":7.72,"行万里路":5.82,"拳击爱好者":2.85,"地球是我的工位":5.2,"瑜伽达人":1.59,"走遍中国":1.79,"环球旅行家":6.19,"渔家乐老板":1.79,"大厂船长":8.71,"地中海":1.6,"神仙眷侣":0.53,"组里的说明书":2.3,"行业百晓生":1.82,"打工人天花板":0.88,"会议室钉子户":1.39,"离谱选项爱好者":2.92,"丁克家庭":1.65,"摸鱼大师":6.88,"爆款制造机":1.96,"笔杆子":4.32,"小城院子":4.21,"岩友":2.85,"撸铁人":1.66,"博士":2.23,"顶会作者":0.64,"工位 CEO":1.03,"浪里白条":1.55,"房奴":2.24,"奶爸奶妈":1.56,"摸鱼宗师":4.4,"半只脚站队":0.73,"网球爱好者":2.97,"字号大一号":0.61,"御前红人":0.78,"仲裁赢家":0.17,"创业者":5,"对赌人生":2.63,"老板的远房亲戚":0.64,"公司比我先走":0.71,"B 轮掌舵人":3.4,"雪道飞人":0.69,"股神":0.4,"普通打工人":0.53,"二胎家庭":0.11,"人间清醒":1.03,"阳朔岩壁":0.57,"全马完赛":1.24,"工位上长出来的人":0.8,"背锅侠":0.84,"恋爱失败专业户":0.46,"前大厂高 P 回流":0.52,"空军终结者":0.06,"周报文学家":0.42,"工位烘焙师":0.07,"星空露营者":0.07,"鸟人":0.04,"学区房战士":0.09,"天才少年计划":0.05,"快乐教育派":0.1,"街拍摄影师":0.04,"周五桌游局":0.03,"老司机":0.01,"阳台园丁":0.03,"漫展常客":0.05,"动物园园长":0.04,"鸡娃家长":0.01,"重点高中家长":0.01,"45度人生":0.01,"薛定谔的打工人":0.01,"我命由我不由天":0.01,"百鸟图鉴":0.01,"业余摄影展":0.01,"次元壁破壁人":0.01,"读书人":0.01,"年会弹唱":0.01,"地球 Online 全图鉴":0.01,"便利店老板":0.01}};
+const RARITY = {"e":{"home_mid":6.44,"rest_good":4.22,"soe_mid":3.19,"nomad_good":5.24,"bankrupt":2,"shop_bad":1.38,"civil_mid":3.05,"rest_bad":4.95,"blogger_mid":6.24,"farm_good":4.52,"fish_mid":5.17,"civil_good":4.72,"shop_good":3.08,"farm_mid":3.08,"soe_bad":0.81,"startup_good":3.4,"home_good":4.19,"abroad":1.24,"fish_good":6.11,"blogger_good":4.25,"rest_mid":2.77,"home_bad":1.13,"shop_mid":2.7,"noncompete":0.95,"fish_bad":0.73,"blogger_bad":0.74,"nomad_mid":2.79,"ai_replaced":0.57,"startup_bad":0.68,"soe_good":1.69,"phd_good":1.43,"fire":0.53,"phd_mid":0.89,"blame":0.13,"angel":1.48,"nomad_bad":0.21,"exec":1.26,"startup_mid":0.85,"burnout":0.03,"lottery":0.47,"farm_bad":0.34,"civil_bad":0.24,"health":0.04,"spinoff":0.03,"phd_bad":0.06,"foreign":0.01,"fossil":0.01,"moyu":0.01,"gig_good":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"回乡青年":11.75,"单身贵族":16.53,"猫奴":24.5,"养生系打工人":39.17,"间隔年":11.94,"国企人":5.68,"绩效守门员":16.28,"数字游民":8.24,"地球是我的工位":5.28,"摸鱼大师":7.1,"旅行爱好者":24.38,"咖啡店主":7.15,"半马完赛":6.46,"飞盘社交达人":2.93,"上岸":8.01,"前大厂博主":11.24,"跳槽达人":18.95,"离谱选项爱好者":3,"半只脚站队":0.73,"租房也要住好点":11.09,"猫狗双全":6.58,"行万里路":5.91,"环球旅行家":6.13,"新农人":7.95,"发量富翁":3.92,"顶格绩效传说":15.88,"狗爸狗妈":17.23,"大厂船长":8.8,"笔杆子":4.72,"一号工程元老":21.35,"摸鱼宗师":4.52,"人间清醒":1.06,"已读不回大师":18.63,"被割过的韭菜":17.66,"A 股贡献者":6.13,"卷王":7.64,"岩友":3.02,"百公里骑士":3.06,"连锁老板":3.08,"活水之王":9.4,"不婚主义者":2.5,"三千点守望者":2.4,"创业者":4.93,"B 轮掌舵人":3.4,"情绪稳定得像个 AI":8.63,"周报文学家":0.53,"羽球健将":2.91,"小城院子":4.19,"工位上长出来的人":0.81,"全马完赛":1.33,"合作社带头人":4.1,"对赌人生":2.4,"奶爸奶妈":1.41,"字号大一号":0.66,"租一辈子也挺好":5.58,"工位 CEO":1.1,"浪里白条":1.74,"梦境客服":8.46,"拳击爱好者":2.89,"走遍中国":1.96,"房奴":2.24,"神仙眷侣":0.53,"组里的说明书":2.61,"行业百晓生":1.91,"打工人天花板":0.99,"丁克家庭":1.74,"工位烘焙师":0.06,"会议室钉子户":1.59,"御前红人":0.92,"冲浪玩家":0.6,"瑜伽达人":1.98,"渔家乐老板":1.83,"老板的远房亲戚":0.57,"网球爱好者":2.85,"爆款制造机":1.88,"百万粉丝":2.65,"地中海":1.82,"手艺人":3,"空军终结者":0.08,"公司比我先走":0.78,"撸铁人":1.81,"国企一把手":1.69,"前大厂高 P 回流":0.52,"博士":2.31,"股神":0.4,"恋爱失败专业户":0.47,"背锅侠":0.82,"普通打工人":0.55,"街拍摄影师":0.07,"学区房战士":0.06,"阳朔岩壁":0.58,"顶会作者":0.56,"雪道飞人":0.69,"鸟人":0.06,"仲裁赢家":0.17,"周五桌游局":0.08,"二胎家庭":0.06,"漫展常客":0.04,"阳台园丁":0.07,"天才少年计划":0.04,"年会弹唱":0.01,"星空露营者":0.03,"快乐教育派":0.07,"动物园园长":0.03,"鸡娃家长":0.03,"地球 Online 全图鉴":0.02,"读书人":0.01,"重点高中家长":0.01,"45度人生":0.01,"薛定谔的打工人":0.01,"我命由我不由天":0.01,"百鸟图鉴":0.01,"业余摄影展":0.01,"次元壁破壁人":0.01,"老司机":0.01,"便利店老板":0.01}};
 function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1(v)}%` : `${Math.round(v)}%`; }
 function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
 function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }
@@ -2716,13 +2747,15 @@ function end(k){
   const bonus = {good:15, mid:5, bad:-5, hidden:10}[e.t];
   const sc = Math.log10(1+Math.max(0,s.money+invTotal()))*18 + (s.out?0:s.lvIdx/s.comp.exec)*30 + s.hp*.1 + s.san*.1 + bonus;
   s.pct = clamp(Math.round(sc*1.05), 1, 99); s.score = Math.round(sc*10)/10;
+  const lead = {health:'那天下午，你在工位上突然眼前一黑。再醒来时，已经在医院了。', burnout:'那个周一早上，你坐在地铁站里，看着一班又一班车开走，最终没有上车。', blame:'复盘会开了三个小时。散会时，HR 说：“你留一下。”', moyu:'老板在 1:1 里说：“我们聊聊你的未来吧。”', fossil:'60 岁生日那天，部门给你订了一个蛋糕，上面写着“光荣退休”。', foreign:'60 岁生日那天，你准时在五点下班，最后一次刷了工牌。', bankrupt:'那天早上，公司门口贴了一张通知。', ai_replaced:'你登录系统时，弹出了一行提示：“账号已停用”。'}[k];
+  if(lead) log('', lead, e.t==='bad' ? 'bad' : '');
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   const ep = kidEpilogue(); if(ep) log('后来', ep, 'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
   s.persona = persona(); s.sting = stingLine();
   try{ const L5 = pastLives(); L5.unshift(lifeRecord()); STORE.setItem('dc_lives', JSON.stringify(L5.slice(0,5))); }catch(err){}
   try{ const g = JSON.parse(STORE.getItem('dc_titles')||'[]'); s.newTitles = titles().filter(t => !g.includes(t)); if(s.newTitles.length) STORE.setItem('dc_titles', JSON.stringify(g.concat(s.newTitles))); }catch(err){ s.newTitles = []; }
-  if(HAS_DOM) showEnding();
+  if(HAS_DOM) render();
 }
 
 /* ============ 第二人生：离开大厂后的篇章 ============ */
@@ -3391,9 +3424,9 @@ function render(){
   $('next').hidden = !!s.over;
   if(s.over){
     $('strat').innerHTML = `<span class="lab">结局</span><b style="font-family:var(--serif)">${ENDINGS[s.ending].n}</b><span class="grades">超过 ${s.pct}% 的打工人</span>`;
-    $('actsW').innerHTML = `<div class="endbar"><button class="btn primary" id="dRecap">回看这一生</button><button class="btn" id="dAgain">重新投胎</button></div>`;
+    $('actsW').innerHTML = `<div class="endbar"><button class="btn primary" id="dEnd">最后一页 ›</button><button class="btn" id="dRecap">回看这一生</button><button class="btn" id="dAgain">重新投胎</button></div>`;
     $('actsL').innerHTML = '';
-    $('dRecap').onclick = () => showRecap(); $('dAgain').onclick = restartGame;
+    $('dEnd').onclick = () => showEnding(); $('dRecap').onclick = () => showRecap(); $('dAgain').onclick = restartGame;
   }
   if(!$('game').hidden){
     $('dock').hidden = !!(s.queue.length && !s.over);

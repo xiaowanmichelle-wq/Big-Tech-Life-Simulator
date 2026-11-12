@@ -141,6 +141,8 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 @media(max-width:560px){.seg{padding:2px 11px}.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
 .act.more{border-style:dashed;color:var(--mute)}
+.hotline{font-size:13px;color:var(--mute);border-left:3px solid var(--line);padding:4px 10px;margin:8px 0}
+.ln.hotline .x{font-size:13px;color:var(--mute)}
 .act:hover:not(:disabled){background:var(--paper2)}
 .act:disabled,.next:disabled{opacity:.35;cursor:not-allowed}
 .next{border:none;background:var(--red);color:#fff;font-weight:700;padding:12px 18px;font-size:15px;white-space:nowrap}
@@ -549,6 +551,7 @@ function startGame(r){
 /* ============ 日志 ============ */
 const NAMES = {abi:'能力',hp:'健康',san:'精神',net:'人脉',boss:'老板好感',hair:'头发'};
 // 数值满 100 解锁称号（一局里任何时刻到过 100 就算）
+const HOTLINE = '现实中如果你也感到撑不住，可以拨打全国统一心理援助热线 12356，会有专业的人听你说。';
 const MAX_TITLES = {boss:['御前红人','老板好感'], abi:['组里的说明书','能力'], hp:['养生系打工人','健康'], san:['情绪稳定得像个 AI','精神'], net:['行业百晓生','人脉']};
 // 彩蛋称号
 const EGGS = {
@@ -715,7 +718,7 @@ function warnCheck(){
   if(s.hp <= 15 && !w.hp){ w.hp = true; ask('身体在报警', '你在会议室里突然眼前一黑。醒来时，同事们正围着你。医生说：“你必须停下来。”', [
     {t:'休一个长病假', sub:'健康和精神恢复，本季表现大幅下降', f:()=>L('你休了两个月病假，每天散步、早睡。回来时，项目已经交给了别人。', fx({hp:25,san:8,qmod:-15,money:-2}))},
     {t:'先扛过这个项目', sub:'健康再见底就会出事', f:()=>L('你吃了两片药，回到了工位。下一次，可能就没有提醒了。', '', 'warn')}]); }
-  else if(s.san <= 15 && !w.san){ w.san = true; ask('情绪在报警', '周一早上，你坐在地铁站的长椅上，看着一班又一班车开走，怎么也站不起来。', [
+  else if(s.san <= 15 && !w.san){ w.san = true; log('', HOTLINE, 'hotline'); ask('情绪在报警', '周一早上，你坐在工位上盯着屏幕，一个字也看不进去，眼泪突然掉了下来。', [
     {t:'请几天假，去看心理咨询', sub:'精神恢复，本季表现下降', f:()=>L('咨询师听你说了很久。你第一次承认，自己真的累了。', fx({san:22,qmod:-6,money:-.5}))},
     {t:'深呼吸，继续硬撑', sub:'精神再见底就会撑不住', f:()=>L('你擦了擦脸，走进了下一班车厢。下一次，可能就没有提醒了。', '', 'warn')}]); }
   else if(s.blame === 2 && !w.blame){ w.blame = true; log('', '这是你背的第二口锅。再有一次，你就会成为整件事的替罪羊。', 'warn'); }
@@ -2747,8 +2750,8 @@ function end(k){
   const bonus = {good:15, mid:5, bad:-5, hidden:10}[e.t];
   const sc = Math.log10(1+Math.max(0,s.money+invTotal()))*18 + (s.out?0:s.lvIdx/s.comp.exec)*30 + s.hp*.1 + s.san*.1 + bonus;
   s.pct = clamp(Math.round(sc*1.05), 1, 99); s.score = Math.round(sc*10)/10;
-  const lead = {health:'那天下午，你在工位上突然眼前一黑。再醒来时，已经在医院了。', burnout:'那个周一早上，你坐在地铁站里，看着一班又一班车开走，最终没有上车。', blame:'复盘会开了三个小时。散会时，HR 说：“你留一下。”', moyu:'老板在 1:1 里说：“我们聊聊你的未来吧。”', fossil:'60 岁生日那天，部门给你订了一个蛋糕，上面写着“光荣退休”。', foreign:'60 岁生日那天，你准时在五点下班，最后一次刷了工牌。', bankrupt:'那天早上，公司门口贴了一张通知。', ai_replaced:'你登录系统时，弹出了一行提示：“账号已停用”。'}[k];
-  if(lead) log('', lead, e.t==='bad' ? 'bad' : '');
+  const lead = {health:'那天下午，你在工位上突然眼前一黑。再醒来时，已经在医院了。', burnout:'那个周一早上，你给老板发了一条消息：“我需要停下来，好好休息一段时间。”', blame:'复盘会开了三个小时。散会时，HR 说：“你留一下。”', moyu:'老板在 1:1 里说：“我们聊聊你的未来吧。”', fossil:'60 岁生日那天，部门给你订了一个蛋糕，上面写着“光荣退休”。', foreign:'60 岁生日那天，你准时在五点下班，最后一次刷了工牌。', bankrupt:'那天早上，公司门口贴了一张通知。', ai_replaced:'你登录系统时，弹出了一行提示：“账号已停用”。'}[k];
+  if(lead) log('', lead, e.t==='bad' ? 'bad' : '', k === 'burnout' ? HOTLINE : '');
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
   const ep = kidEpilogue(); if(ep) log('后来', ep, 'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
@@ -3514,7 +3517,7 @@ function showEnding(){
   const kind = {good:'好结局',mid:'中性结局',bad:'坏结局',hidden:'隐藏结局'}[e.t];
   const pe = s.persona || persona(), rt = rarestTitle(), er = endRarity();
   $('ending').innerHTML = `<div class="ec"><div class="kind">${s.daily ? `今日开局 · ${dailyLabel(s.daily)} · ` : ''}${kind}${er ? ` · ${er} 的人生走到这里` : ''}</div><h2 class="${cls}">${e.n}</h2>
-    <div class="story">${endText(s.ending)}</div>
+    <div class="story">${endText(s.ending)}</div>${s.ending === 'burnout' ? `<p class="hotline">${HOTLINE}</p>` : ''}
     <div class="sting">${s.sting || stingLine()}</div>
     <div class="pct">你的人生超过了 <b>${s.pct}%</b> 的打工人</div>
     <div class="persona"><small>你的职场人格</small><b>${pe.n}</b><span>${pe.d}</span></div>

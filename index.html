@@ -730,7 +730,7 @@ function warnCheck(){
 function endChecks(){
   if(s.hp <= 0){ end('health'); return true; }
   if(s.san <= 0){ end('burnout'); return true; }
-  if(s.blame >= 3){ end('blame'); return true; }
+  if(s.blame >= 3 && !maternityProtected()){ end('blame'); return true; }
   if(s.moyu >= 40){ end('moyu'); return true; }
   if(s.age >= 60){ end(s.flags.execCont && !s.flags.sidelined ? 'exec' : s.flags.ipoStay ? 'spinoff' : s.comp.foreign ? 'foreign' : 'fossil'); return true; }
   return false;
@@ -767,7 +767,7 @@ function evolveBiz(){
           {t:'抢一个活水名额', f:()=>{
             const tg = s.biz.map((x,j)=>({x,j})).filter(o=>!o.x.dead && o.j!==s.bizIdx);
             if(chance(.45+lastPv()*.3) && tg.length){ const o = pick(tg); moveBiz(o.j); L(`你抢到了「${o.x.n}」的名额。`,'','good'); }
-            else { L('名额被别人抢光了。','','bad'); leaveMenu('laid'); }
+            else { L('名额被别人抢光了。','','bad'); forcedOut('laid'); }
           }},
           {t:'拿 N+1 走人', f:()=>leaveMenu('laid')},
           ...(s.lvIdx >= 1 && s.age <= 42 ? [{t:'跟着业务负责人出去单干', sub:'把这块业务带出去创业', f:()=>{ L(`业务负责人拉着你们几个核心成员出去单干，把「${b.n}」做成了一家新公司。`, fx({san:4})); startChapter('startup'); }}] : []),
@@ -815,7 +815,7 @@ function review(){
   if(pv===0){ s.st.bottom++; s.lowStreak++; } else s.lowStreak = 0;
   if(s.pip){
     s.pip = false;
-    if(pv===0){ L('PIP 没过。HR 把离职单推到你面前。','','bad'); leaveMenu('fired'); return; }
+    if(pv===0){ L('PIP 没过。HR 把离职单推到你面前。','','bad'); forcedOut('fired'); return; }
     L('PIP 过了。你活下来了。', fx({san:5}), 'good');
   }
   if(c.id==='ali' && s.grades.length>=2 && s.grades.slice(-2).every(g=>g==='3.75') && s.lvIdx < c.exec){
@@ -870,8 +870,18 @@ function promote(){
 }
 
 /* ============ 裁员 / 离职 ============ */
+// 三期保护：女性员工孕期、产假和哺乳期（孩子一岁以内），公司不能以裁员、不胜任等理由辞退
+function maternityProtected(){
+  if(!s || s.gender !== 'f' || s.out) return false;
+  const recent = at => at != null && s.turn - at < 4;
+  return !!(s.flags.preg || s.flags.preg2 || recent(s.flags.kidAt) || recent(s.flags.kid2At));
+}
+function forcedOut(kind){
+  if(maternityProtected()){ log('', '但你正处于孕期或哺乳期，依法不能被辞退。HR 把你的名字从名单上划掉了。', 'good'); return; }
+  leaveMenu(kind);
+}
 function layoffCheck(){
-  if(isRare('kin')) return;
+  if(isRare('kin') || maternityProtected()) return;
   if(s.flags.shield && s.wave){ s.flags.shield = false; L('裁员名单公布了，你不在上面——那个转岗名额救了你。', '', 'good'); return; }
   let p = s.comp.lay * [3,1,.4][bizSt()];
   const lp = lastPv(); if(lp===0) p *= 3; else if(lp < .4) p *= 1.5;
@@ -885,6 +895,7 @@ function layoffCheck(){
 }
 
 function fireCheck(){
+  if(maternityProtected()) return;
   if(s.money >= 600 && s.net >= 65 && !s.flags.angel){
     s.flags.angel = true;
     ask('一个饭局', '前同事创业了，饭桌上他半开玩笑：“你要不要来当我们的天使？”', [
@@ -1816,7 +1827,7 @@ const FAMILY_EVENTS = [
    {t:'“以后每个周六都陪你”', f:()=>{ L('你在日历上把每个周六都标成了灰色。', fx({san:4,qmod:-2})); later(4, ()=>{ if(s.strat==='juan') L('这个季度，你只陪了孩子两个周六。孩子没再问那个问题了。', fx({san:-6}), 'warn'); else { happyAdd(1); L('你们去了动物园、科技馆，还爬了两次山。孩子画了一张画，上面是你们俩。', fx({san:6}), 'good'); } }, true); }},
    {t:`“${ta()}在努力赚钱”`, f:()=>L('孩子“哦”了一声，翻身睡了。', fx({san:-3}))}]); }},
  {w:()=>(s.flags.married && s.flags.kid && !s.flags.kid2Ask && kidAge()>=3 && kidAge()<=8 && s.age<=41)?1.2:0, cd:4, f:()=>{ s.flags.kid2Ask = true; ask('要二胎吗', '老大上了幼儿园。家里人开始旁敲侧击：“一个孩子太孤单了。”', [
-   {t:'要', f:()=>{ L(s.gender==='f' ? '你又怀孕了。这一次，你知道接下来会发生什么。' : '另一半又怀孕了。你默默把车换成了七座的。', fx({san:-2})); s.timers.push({at:s.turn+3, f:()=>{ if(s.over) return; s.flags.kid2 = true; L('老二出生了。老大趴在床边看了很久，说：“它好小。”', fx({san:8,money:-5,qmod:s.gender==='f'?-10:-2}), 'good milestone'); }}); }},
+   {t:'要', f:()=>{ s.flags.preg2 = s.gender === 'f'; L(s.gender==='f' ? '你又怀孕了。这一次，你知道接下来会发生什么。' : '另一半又怀孕了。你默默把车换成了七座的。', fx({san:-2})); s.timers.push({at:s.turn+3, f:()=>{ if(s.over) return; s.flags.kid2 = true; s.flags.preg2 = false; s.flags.kid2At = s.turn; L('老二出生了。老大趴在床边看了很久，说：“它好小。”', fx({san:8,money:-5,qmod:s.gender==='f'?-10:-2}), 'good milestone'); }}); }},
    {t:'一个就够了', f:()=>L('你们把婴儿床送给了刚生孩子的同事。', fx({san:1}))}]); }},
  {w:()=>(s.flags.kid && kidAge()>=12 && kidAge()<=17)?1:0, cd:8, f:()=>ask('青春期', '孩子把房门关上了。门上贴着一张纸：“进来请敲门”。', [
    {t:'敲门，进去聊聊', f:()=>L(chance(.5) ? '孩子说起了班上的事，你们聊到了半夜。' : '孩子说：“你不懂。”你确实不太懂。', fx({san:1}))},
@@ -1898,7 +1909,7 @@ const ARCS = [
       const f = s.arc.faction, lose = chance(.5) ? 'a' : 'b', loser = f[lose], winner = f[lose === 'a' ? 'b' : 'a'];
       TW(`集团内审结果出来了：VP ${loser} 因“利益输送”被带走调查。${loser}那条线上的人，一夜之间被清洗。`, '', 'bad');
       if(f.pick === lose){
-        if(chance(.5)){ log('', `你的名字出现在了“整顿名单”上。HR 说这是“组织调整”。`, 'bad'); leaveMenu('fired'); }
+        if(chance(.5)){ log('', `你的名字出现在了“整顿名单”上。HR 说这是“组织调整”。`, 'bad'); forcedOut('fired'); }
         else { s.bizIdx = edgeBiz(); s.boss = 25; L(`你被“平调”去了「${s.biz[s.bizIdx].n}」。没有人再约你喝咖啡了。`, fx({san:-10}), 'bad'); }
       } else if(f.pick === 'n'){ L(`你是这条线上少数没被牵连的人。新上任的 ${winner} 把一半的盘子交给了你。`, fx({qmod:8,net:4,boss:10}), 'good'); }
       else { s.flags.promoHelp = true; L(`${winner} 赢了。庆功宴上，${winner}把你叫到身边：“这次你站对了。”`, fx({boss:15,qmod:6}), 'good'); }
@@ -1926,15 +1937,15 @@ const ARCS = [
   {k:'buyback', c:()=>!s.out && !s.comp.foreign, seed:()=>{ const v = r1(curPay() * rf(.6,1)); s.arc.buyback = {v};
     ask('期权回购', `公司发起期权回购：你手里的期权，现在卖可以拿到约 ${v} 万。名额有限，一周内决定。`, [
       {t:`卖掉，落袋为安（+${v} 万）`, f:()=>{ s.arc.buyback.sold = true; L(`你卖掉了期权，拿着这笔钱付了首付的一半。`, fx({money:v,san:4})); }},
-      {t:'不卖，赌公司上市', f:()=>{ s.arc.buyback.sold = false; L('你把回购邮件归档了。同事说你“格局打开了”。'); }}]);
+      {t: (s.comp.unicorn || s.comp.spinoff) ? '不卖，赌公司上市' : '不卖，等股价再涨一涨', f:()=>{ s.arc.buyback.sold = false; L('你把回购邮件归档了。同事说你“格局打开了”。'); }}]);
     later(rnd(8,12), () => {
-      const b = s.arc.buyback, ipo = chance(.5);
+      const b = s.arc.buyback, ipo = chance(.5), listed = !(s.comp.unicorn || s.comp.spinoff);
       if(b.sold){
-        if(ipo) TW(`公司在港股上市了，敲钟那天市值翻了三倍。你当年卖掉的期权，现在值 ${r1(b.v*3)} 万。`, fx({san:-12}), 'bad');
-        else TW('公司估值腰斩，期权回购暂停。当年卖掉的人被大家叫做“先知”——包括你。', fx({san:8}), 'good');
+        if(ipo) TW(listed ? `公司股价两年涨了三倍。你当年卖掉的期权，现在值 ${r1(b.v*3)} 万。` : `公司在港股上市了，敲钟那天市值翻了三倍。你当年卖掉的期权，现在值 ${r1(b.v*3)} 万。`, fx({san:-12}), 'bad');
+        else TW(listed ? '公司股价跌了一半，回购也暂停了。当年卖掉的人被大家叫做“先知”——包括你。' : '公司估值腰斩，期权回购暂停。当年卖掉的人被大家叫做“先知”——包括你。', fx({san:8}), 'good');
       } else {
-        if(ipo){ const g = r1(b.v * rf(2.5,4)); TW(`公司上市了！解禁那天，你的期权值 ${g} 万。你在工位上坐了很久，然后给爸妈打了个电话。`, fx({money:g,san:10}), 'good'); }
-        else TW('上市计划被叫停。你手里的期权，重新变回了一张纸。', fx({san:-8}), 'bad');
+        if(ipo){ const g = r1(b.v * rf(2.5,4)); TW(listed ? `公司股价一路走高。行权那天，你的期权值 ${g} 万。你在工位上坐了很久，然后给爸妈打了个电话。` : `公司上市了！解禁那天，你的期权值 ${g} 万。你在工位上坐了很久，然后给爸妈打了个电话。`, fx({money:g,san:10}), 'good'); }
+        else TW(listed ? '公司股价一路下跌，你的期权行权价比股价还高，成了一张纸。' : '上市计划被叫停。你手里的期权，重新变回了一张纸。', fx({san:-8}), 'bad');
       }
     });
   }},
@@ -1958,7 +1969,7 @@ const ARCS = [
     later(rnd(5,8), () => {
       if(!s.arc.acq.go) return;
       if(chance(.5)){ TW('新东家把你们团队当成了收购的核心资产。整合完成后，你被提拔了。', '', 'good'); if(s.lvIdx < s.comp.exec - 1) promote(); }
-      else { TW('并购整合完成。新东家宣布“团队融合”，你们被并入了一个更大的部门——然后被“优化”了。', '', 'bad'); leaveMenu('laid'); }
+      else { TW('并购整合完成。新东家宣布“团队融合”，你们被并入了一个更大的部门——然后被“优化”了。', '', 'bad'); forcedOut('laid'); }
     }, true);
   }},
   {k:'collapse', c:()=>!s.out && (s.comp.unicorn || s.comp.tag === '二线' || s.comp.spinoff), seed:()=>{ s.arc.collapse = {};
@@ -1999,7 +2010,7 @@ const ARCS = [
       {t:'推给别人', f:()=>{ s.arc.ai.lead = false; L('你说手上的项目太忙，推荐了隔壁组的同事。', fx({boss:-4})); }}]);
     later(rnd(6,10), () => {
       if(s.arc.ai.lead){ TW('试点成了全公司的标杆案例。新成立的 AI 中台点名要你过去当负责人。', '', 'good'); s.bizIdx = bestBiz(); if(s.lvIdx < s.comp.exec - 1) promote(); }
-      else if(chance(.5)){ TW('试点跑通了。第二个月，你们组砍掉了一半的人——你在名单上。', '', 'bad'); leaveMenu('laid'); }
+      else if(chance(.5)){ TW('试点跑通了。第二个月，你们组砍掉了一半的人——你在名单上。', '', 'bad'); forcedOut('laid'); }
       else { s.aiRisk = true; TW('试点跑通了，隔壁组的同事被提拔成了负责人。你们组的 HC 被冻结，新需求全交给了 AI。', fx({san:-6}), 'bad'); }
     });
   }},

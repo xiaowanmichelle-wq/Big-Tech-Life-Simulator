@@ -942,7 +942,7 @@ function joinCompany(of){
   if(of.c.id !== 'spin') s.spin = null;
   s.comp = of.c; s.lvIdx = of.lv; s.out = false; s.mult = of.mult || 1;
   s.biz = of.c.biz.map(b => ({n:b[0],st:b[1],tr:b[2],eq:0,dead:false})); s.bizIdx = of.biz;
-  s.boss = of.keepBoss || rnd(45,60); s.qs = []; s.reviews = []; s.grades = []; s.sinceProm = 0; s.lowStreak = 0; s.pip = false;
+  s.boss = of.keepBoss || rnd(45,60); s.flags.bossBad = false; s.qs = []; s.reviews = []; s.grades = []; s.sinceProm = 0; s.lowStreak = 0; s.pip = false;
   s.compQ = 0; s.hunts = 0; s.st.companies++; s.optGrant = 0; s.aiVal = 1; s.unemployed = false;
   s.queue = []; // 前司的待办选择作废
   log('入职', `你加入了${of.c.n}，职级 ${lvLabel()}，「${s.biz[s.bizIdx].n}」业务（${STN[bizSt()]}）。`, 'head');
@@ -1280,7 +1280,7 @@ const EVENTS_BASE = [
    {t:'把周一的闹钟改到周二', f:()=>wild(()=>L('你睡了一个好觉。醒来发现，今天是周一。', fx({san:2,qmod:-2})))}])},
  {w:()=>s.age>=29?2:0, cd:10, f:()=>L(pick(['颈椎开始疼了。你买了一个三百块的人体工学枕。','你发现自己爬三层楼梯会喘。','眼科医生说你的干眼症“很典型”。']), fx({hp:-3}))},
  {w:()=>s.pets.length<2?1.5:0, once:1, f:()=>ask('一只猫','小区楼下有只橘猫跟了你三天。',[
-   {t:'带回家', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你把它抱回了家，取名「${n}」。`, fx({san:8,money:-.5}),'good'); })},
+   {t:'带回家', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你把它抱回了家，取名「${n}」。`, fx({san:5,money:-.2}),'good'); })},
    {t:'喂点吃的就走', f:()=>L('第四天它不见了。你有点难过。', fx({san:-1}))}])},
  {w:()=>(!s.flags.house && s.age>=24)?1.5:0, cd:12, f:()=>L('房东要卖房，给了你一个月搬家。', fx({san:-4,money:-1}))},
  {w:()=>(s.age>=30 && !s.fam.money)?1.5:0, cd:12, f:()=>L('爸妈打电话：“回来吧，考个编制，离家近。”', fx({san:-2}))},
@@ -1356,8 +1356,8 @@ const EVENTS_BASE = [
 
 /* ============ 幽默：离谱选项 · 黑话翻译 · 日常小事 ============ */
 function newBoss(intro){ const n = pick(SURN) + pick(GIVN); ask('新老板', `${intro || '组织架构调整，'}${n}从别的事业部空降过来当你的老板。第一次周会就说“我们要重新梳理一下”。`, [
-   {t:'主动约 1:1，汇报你手上的事', f:()=>{ const g = has('向上管理大师') || chance(.6); s.boss = g ? rnd(55,70) : rnd(35,50); L(g ? `${n}听完说：“你是组里最清楚业务的人。”` : `${n}一边听一边回消息，最后说：“好的，我了解了。”`, '老板好感重置', g ? 'good' : 'warn'); }},
-   {t:'先观望，看看新老板的风格', f:()=>{ s.boss = rnd(40,55); L('你在群里默默观察了一个月。新老板喜欢数据，不喜欢长文档。三个月后，“重新梳理”的结论是：保持原样。', '老板好感重置'); }},
+   {t:'主动约 1:1，汇报你手上的事', f:()=>{ const g = has('向上管理大师') || chance(.6); s.boss = g ? rnd(55,70) : rnd(35,50); s.flags.bossBad = !g; L(g ? `${n}听完说：“你是组里最清楚业务的人。”` : `${n}一边听一边回消息，最后说：“好的，我了解了。”`, '老板好感重置', g ? 'good' : 'warn'); }},
+   {t:'先观望，看看新老板的风格', f:()=>{ s.boss = rnd(40,55); s.flags.bossBad = chance(.3); L('你在群里默默观察了一个月。新老板喜欢数据，不喜欢长文档。三个月后，“重新梳理”的结论是：保持原样。', '老板好感重置'); }},
    {t:'趁机申请转岗', f:()=>transferMenu()}]); }
 function askKid(text){
    const f = s.gender === 'f';
@@ -1382,6 +1382,7 @@ function familyMenu(){
   }
   if(s.flags.married){
     o.push({t:'和另一半出去约会', f:()=>{ strain(-1); L(pick(['你们去吃了刚在一起时常去的那家店。老板居然还记得你们。','你们去看了一场电影，散场后在街上走了很久。','你们关掉手机，在家做了一顿饭。']), fx({san:5,money:-.3})); }});
+    if((s.flags.strain||0) >= 2) o.push({t:'提出离婚', f:()=>proposeDivorce()});
     if(!s.flags.kid && !s.flags.preg && !s.flags.dink && s.age < 42) o.push({t:'和另一半聊聊：要不要孩子？', f:()=>askKid('你主动提起了这个话题。另一半愣了一下，然后认真地看着你。')});
   } else if(s.flags.dating){
     o.push({t:'和对象去约会', f:()=>{ strain(-1); L(pick(['你们去城郊爬了山，在山顶分了一个橘子。','你们去看了一场脱口秀，笑到旁边的人回头看。','你们在江边走了一晚上，什么都聊了。']), fx({san:5,money:-.2})); }});
@@ -1469,6 +1470,12 @@ function ldrFor(n, backMsg, need){
 function startDating(msg){ s.flags.dating = true; s.flags.datingAt = s.turn; s.flags.strain = 0; L(msg, fx({san:6}), 'good'); }
 function breakUp(msg){ s.flags.dating = false; s.flags.ldr = false; s.flags.strain = 0; s.st.breakups = (s.st.breakups||0) + 1; L(msg, fx({san:-8}), 'bad'); }
 function marry(msg){ s.flags.married = true; s.flags.dating = false; s.flags.marriedAt = s.turn; s.flags.strain = 0; L(msg, fx({san:10,money:-15}), 'good milestone'); }
+// 玩家主动提出离婚
+function proposeDivorce(){
+  ask('提出离婚', '你说出了那句在心里转了很久的话。另一半沉默了很久。', [
+    {t:'认真谈一次，好聚好散', f:()=>{ if(chance(.65)) divorce(); else { s.flags.strain = Math.max(1, (s.flags.strain||0) - 2); L('另一半哭了：“我们再试一次，好吗？”你们第一次聊到了天亮。', fx({san:-2})); } }},
+    {t:'算了，当我没说', f:()=>{ strain(1); L('话已经说出口了。那之后，家里比以前更安静了。', fx({san:-4})); }}]);
+}
 function divorce(){
   s.flags.married = false; s.flags.divorced = true; s.flags.strain = 0; s.flags.ldr = false;
   const v = r1(Math.max(0, s.money) * .4);
@@ -1590,8 +1597,9 @@ const FAMILY_EVENTS = [
  /* ---------- 婚姻 ---------- */
  {w:()=>(s.flags.married && !s.flags.ldr)?(s.strat==='juan'?1.6:.5):0, cd:8, f:()=>ask('冷战', '你已经连续一个月十点以后才到家。某天晚上，另一半说：“我们聊聊。”', [
    {t:'请几天年假，一起出去走走', f:()=>{ strain(-2); L('你们去了一趟海边。回来的高铁上，你们聊起了刚认识的时候。', fx({money:-3,san:8,qmod:-3})); }},
-   {t:'“最近项目紧，过了这阵就好”', f:()=>{ strain(1); L('另一半没再说话。那天晚上，你们背对背睡着。', fx({san:-5})); }}])},
- {w:()=>(s.flags.married && (s.flags.strain||0)>=4)?3:0, cd:8, f:()=>ask('婚姻亮起红灯', '另一半把一张打印好的纸放在桌上：“我认真想过了。”', [
+   {t:'“最近项目紧，过了这阵就好”', f:()=>{ strain(1); L('另一半没再说话。那天晚上，你们背对背睡着。', fx({san:-5})); }},
+   ...((s.flags.strain||0) >= 2 ? [{t:'“我们是不是该分开了？”', f:()=>proposeDivorce()}] : [])])},
+ {w:()=>(s.flags.married && (s.flags.strain||0)>=4)?3:0, cd:8, f:()=>ask('婚姻亮起红灯', '吵了太多次之后，另一半把一张打印好的离婚协议放在桌上：“我认真想过了。”', [
    {t:'去做婚姻咨询，再试一次', f:()=>{ if(chance(.55)){ s.flags.strain = 1; L('咨询师让你们每周留一个晚上，不看手机。你们坚持了下来。', fx({money:-2,san:4}), 'good'); } else divorce(); }},
    {t:'尊重对方的决定', f:()=>divorce()}])},
  {w:()=>(s.flags.married && !s.flags.moveAsk)?.6:0, cd:8, f:()=>{ s.flags.moveAsk = true; ask('另一半要调去外地', '另一半的公司在外地开新分部，想让 TA 去当负责人。', [
@@ -1878,7 +1886,11 @@ const ACTIONS = [
   /* 工作 */
   {k:'w', n:'抢项目', f:()=>L(pick(['你主动认领了一个没人想接的难活，熬了三个星期把它啃了下来。','你在周会上主动请缨，接下了老板最头疼的需求。','你把一个拖了半年的老问题顺手解决了，老板在群里点名表扬。']), fx({qmod:9,hp:-4,san:-2,boss:2}))},
   {k:'w', n:'充电学习', f:()=>{ const v = rnd(4,6); L(pick(['你周末啃完了一本技术书，周一就用在了项目上。','你上完了一门大模型课程，给组里做了一次分享。','你复盘了过去一年的项目，写了一篇方法论文档。']), fx({abi:v,qmod:3,san:-1,money:-.5}) + ' · 能力会持续提升之后每个季度的表现'); }},
-  {k:'w', n:'向上管理', f:()=>{ let v = rnd(7,12); if(has('向上管理大师')) v = Math.round(v*1.6); if(has('技术洁癖')) v = Math.round(v*.5); L(pick(['你主动约老板 1:1，汇报了进展和下一步计划。','你帮老板改了一份给 VP 的 PPT，他很满意。','你提前把风险同步给了老板，他在上级面前没被问住。']), fx({boss:v,qmod:2,san:-2})); }},
+  {k:'w', n:'向上管理', f:()=>{
+    if(s.boss >= 60) s.flags.bossBad = false;
+    let risk = (s.boss < 40 ? .3 : .08) + (s.flags.bossBad ? .2 : 0); if(has('向上管理大师')) risk *= .5;
+    if(chance(risk)){ L(pick(['你约老板 1:1 汇报进展。他听了两分钟就打断你：“这些我都知道，你把自己的事做好就行。”','你帮老板改了一份给 VP 的 PPT。第二天，他原封不动地改了回去。','你提前把风险同步给老板。周会上他说：“有些同学喜欢制造焦虑。”']), fx({boss:-rnd(4,8),san:-3}), 'warn'); return; }
+    let v = rnd(7,12); if(has('向上管理大师')) v = Math.round(v*1.6); if(has('技术洁癖')) v = Math.round(v*.5); L(pick(['你主动约老板 1:1，汇报了进展和下一步计划。','你帮老板改了一份给 VP 的 PPT，他很满意。','你提前把风险同步给了老板，他在上级面前没被问住。']), fx({boss:v,qmod:2,san:-2})); }},
   {k:'w', n:'活水转岗', c:()=>!s.out, f:()=>transferMenu()},
   {k:'w', n:'看机会', f:()=>{
     const p = .35 + (s.abi-50)*.01 + lastPv()*.15 - Math.max(0,s.age-33)*.04 - (s.wave?.15:0);
@@ -2270,20 +2282,23 @@ function birthEvent(){
       {t:'只休三天', f:()=>L('你第四天就回到了工位。另一半在电话里没说话。', fx({san:-6,boss:4}))}]);
   }
 }
+// 连续每个季度都陪宠物玩，治愈效果会递减
+let petFresh = () => true;
 function petMenu(){
+  const fresh = s.turn - (s.flags.petPlayAt == null ? -9 : s.flags.petPlayAt) > 1; petFresh = () => fresh; s.flags.petPlayAt = s.turn;
   const o = [];
   if(s.pets.length > 2){
     const dogs = s.pets.some(p => p.type === '狗');
-    o.push({t:`陪 ${s.pets.length} 只毛孩子一起玩`, sub: dogs ? '健康和精神都会好一点' : '精神会好一些', f:()=>{ L(pick([`你坐在地板上，${s.pets.map(p=>p.name).join('、')}轮流过来蹭你。`, `你买了一大袋零食，家里瞬间变成了游乐场。`, `你带着它们拍了一张全家福，发了朋友圈，收获了 87 个赞。`]), fx({san:7, hp: dogs ? 3 : 0, money:-.5}), 'pet'); }});
-    o.push({t:'带它们去体检洗澡', sub:`约 ${r1(s.pets.length*.8)} 万`, f:()=>{ s.pets.forEach(p => p.next = s.turn + 3); L('宠物医院的前台看到你，说：“又是你啊，办张会员卡吧。”', fx({san:3,money:-r1(s.pets.length*.8)}), 'pet'); }});
+    o.push({t:`陪 ${s.pets.length} 只毛孩子一起玩`, sub: dogs ? '健康和精神都会好一点' : '精神会好一些', f:()=>{ L(pick([`你坐在地板上，${s.pets.map(p=>p.name).join('、')}轮流过来蹭你。`, `你买了一大袋零食，家里瞬间变成了游乐场。`, `你带着它们拍了一张全家福，发了朋友圈，收获了 87 个赞。`]), fx({san:petFresh()?4:1, hp: dogs ? (petFresh()?2:1) : 0, money:-.05}), 'pet'); }});
+    o.push({t:'带它们去体检洗澡', sub:`约 ${s.pets.length*1000} 元`, f:()=>{ s.pets.forEach(p => p.next = s.turn + 3); L('宠物医院的前台看到你，说：“又是你啊，办张会员卡吧。”', fx({san:2,money:-r1(s.pets.length*.1)}), 'pet'); }});
   } else for(const p of s.pets){
-    if(p.type === '狗') o.push({t:`带「${p.name}」去公园撒欢`, sub:'健康和精神都会好一点', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你带${p.name}去公园跑了一大圈，它把一只飞盘叼回来七次。`,`${p.name}在草地上打滚，你坐在长椅上，第一次觉得周末这么长。`,`你和${p.name}去爬了山，它在山顶对着远处叫了三声。`]), fx({hp:4,san:5,money:-.2}), 'pet'); }});
-    else o.push({t:`陪「${p.name}」玩逗猫棒`, sub:'精神会好一些', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你陪${p.name}玩了一晚上逗猫棒，它最后跳上你的键盘睡着了。`,`${p.name}趴在你腿上打呼噜，你没有打开电脑。`,`你给${p.name}买了个新猫爬架，它更喜欢装猫爬架的那个纸箱。`]), fx({san:6,money:-.3}), 'pet'); }});
-    o.push({t:`带「${p.name}」去体检洗澡`, sub:'花点钱，它会更健康', f:()=>{ p.bond = (p.bond||0) + 1; p.next = s.turn + 3; L(`${p.name}洗完澡香喷喷的，医生说它很健康。`, fx({san:3,money:-.8}), 'pet'); }});
+    if(p.type === '狗') o.push({t:`带「${p.name}」去公园撒欢`, sub:'健康和精神都会好一点', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你带${p.name}去公园跑了一大圈，它把一只飞盘叼回来七次。`,`${p.name}在草地上打滚，你坐在长椅上，第一次觉得周末这么长。`,`你和${p.name}去爬了山，它在山顶对着远处叫了三声。`]), fx({hp:petFresh()?2:1,san:petFresh()?3:1,money:-.02}), 'pet'); }});
+    else o.push({t:`陪「${p.name}」玩逗猫棒`, sub:'精神会好一些', f:()=>{ p.bond = (p.bond||0) + 1; L(pick([`你陪${p.name}玩了一晚上逗猫棒，它最后跳上你的键盘睡着了。`,`${p.name}趴在你腿上打呼噜，你没有打开电脑。`,`你给${p.name}买了个新猫爬架，它更喜欢装猫爬架的那个纸箱。`]), fx({san:petFresh()?3:1,money:-.02}), 'pet'); }});
+    o.push({t:`带「${p.name}」去体检洗澡`, sub:'约 1000 元，它会更健康', f:()=>{ p.bond = (p.bond||0) + 1; p.next = s.turn + 3; L(`${p.name}洗完澡香喷喷的，医生说它很健康。`, fx({san:2,money:-.1}), 'pet'); }});
   }
   {
-    o.push({t:'领养一只猫', sub:'安静治愈，每季度精神慢慢恢复', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-1,san:6}),'good'); })});
-    o.push({t:'养一只狗', sub:'每天要遛，精神和健康都会好一点', f:()=>namePet('狗', n => { adoptPet('狗', n); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-1.5,san:6}),'good'); })});
+    o.push({t:'领养一只猫', sub:'约 3000 元 · 安静治愈，每季度精神慢慢恢复', f:()=>namePet('猫', n => { adoptPet('猫', n); L(`你从救助站领养了一只猫，取名「${n}」。`, fx({money:-.3,san:4}),'good'); })});
+    o.push({t:'养一只狗', sub:'约 5000 元 · 每天要遛，精神和健康都会好一点', f:()=>namePet('狗', n => { adoptPet('狗', n); L(`你养了一只狗，取名「${n}」。从此每天早上六点半被叫醒。`, fx({money:-.5,san:4}),'good'); })});
   }
   o.push({t:'算了', f:()=>{}});
   ask(s.pets.length ? '你的宠物' : '养宠物', s.pets.length ? `${s.pets.map(p=>p.name).join('和')}正看着你。` : '你想养点什么？', o);
@@ -2312,21 +2327,21 @@ const PET_TXT = {
 function petTick(){
   if(s.pets.length >= 4 && chance(.08)) log('', pick([`家里现在有 ${s.pets.length} 只毛孩子。房东来收房租时，在门口站了很久。`, `你每天下班先铲屎，再喂饭，最后才轮到自己吃饭。`, `${s.pets.length} 只宠物一起在门口迎接你，像一支欢迎仪仗队。`]), 'pet', fx({san:2,money:-.5}));
   s.pets.forEach((p, i) => {
-    const k = i < 2 ? 1 : .25; // 多养的宠物也会陪你，但“治愈效果”不会无限叠加
-    s.san = clamp(s.san + 1.2 * k);
-    if(p.type==='狗') s.hp = clamp(s.hp + .8 * k);
-    s.money = r1(s.money - .25);
+    const k = i < 2 ? 1 : .15; // 多养的宠物也会陪你，但“治愈效果”不会无限叠加
+    s.san = clamp(s.san + .5 * k);
+    if(p.type==='狗') s.hp = clamp(s.hp + .4 * k);
+    s.money = r1(s.money - .15);
     if(s.turn >= p.next){
       p.next = s.turn + rnd(2,3);
       if(s.juanStreak >= 4 && chance(.45)) log('', `你最近每天很晚才回家，${p.name}已经不去门口接你了。`, 'pet', fx({san:-2}));
-      else if(chance(.12)) log('', `${p.name}生病了，你请了半天假带它去宠物医院。`, 'pet', fx({money:-rnd(1,3),san:-2}));
+      else if(chance(.12)) log('', `${p.name}生病了，你请了半天假带它去宠物医院。`, 'pet', fx({money:-r1(rf(.1,.5)),san:-2}));
       else {
         const all = PET_TXT[p.type].map((_,i)=>i);
         p.used = p.used || [];
         let left = all.filter(i => !p.used.includes(i));
         if(!left.length){ p.used = []; left = all; }
         const i = pick(left); p.used.push(i);
-        log('', PET_TXT[p.type][i](p.name), 'pet', fx({san:rnd(3,5)}));
+        log('', PET_TXT[p.type][i](p.name), 'pet', fx({san:rnd(1,3)}));
       }
     }
   });
@@ -2496,7 +2511,7 @@ function stingLine(){
   }
   return c[0][1];
 }
-const RARITY = {"e":{"noncompete":1,"rest_good":4.52,"nomad_good":5.53,"shop_mid":2.63,"home_good":5.1,"rest_bad":4.83,"fish_mid":4.61,"blogger_mid":6.38,"shop_good":3.16,"civil_good":5.14,"farm_good":4.64,"home_mid":5.76,"startup_bad":0.71,"farm_bad":0.39,"shop_bad":1.36,"bankrupt":1.82,"blogger_bad":0.73,"rest_mid":2.09,"startup_good":3.5,"civil_mid":2.94,"exec":2.42,"fish_good":6.72,"blogger_good":4.32,"soe_mid":3.02,"soe_good":1.82,"farm_mid":3.06,"lottery":0.55,"angel":1.07,"nomad_mid":2.54,"abroad":1.33,"startup_mid":0.82,"phd_good":1.38,"fire":0.38,"phd_mid":0.79,"home_bad":0.51,"soe_bad":0.74,"ai_replaced":0.6,"civil_bad":0.24,"fish_bad":0.48,"nomad_bad":0.14,"blame":0.11,"health":0.04,"spinoff":0.04,"phd_bad":0.03,"burnout":0.01,"gig_good":0.01,"foreign":0.01,"fossil":0.01,"moyu":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"卷王":8.3,"绩效守门员":16.41,"顶格绩效传说":17.13,"租房也要住好点":11.11,"狗爸狗妈":17.3,"旅行爱好者":24.93,"间隔年":11.45,"摸鱼大师":6.96,"跳槽达人":19.02,"养生系打工人":40.56,"情绪稳定得像个 AI":18.85,"已读不回大师":18.57,"猫狗双全":6.53,"数字游民":8.21,"地球是我的工位":5.2,"被割过的韭菜":17.51,"瑜伽达人":1.75,"半马完赛":6.45,"咖啡店主":7.15,"活水之王":9.73,"梦境客服":8.15,"回乡青年":11.37,"小城院子":5.1,"丁克家庭":1.7,"猫奴":24.8,"大厂船长":8.95,"字号大一号":0.74,"A 股贡献者":5.9,"前大厂博主":11.42,"房奴":2.29,"连锁老板":3.16,"上岸":8.33,"笔杆子":5.14,"飞盘社交达人":2.95,"新农人":8.09,"单身贵族":16.09,"创业者":5.03,"拳击爱好者":3.16,"一号工程元老":21.73,"手艺人":3.17,"岩友":3.08,"奶爸奶妈":1.64,"行万里路":5.92,"环球旅行家":6.38,"B 轮掌舵人":3.5,"全马完赛":1.33,"工位 CEO":1,"合作社带头人":4.11,"地中海":1.91,"不婚主义者":2.69,"租一辈子也挺好":5.42,"国企人":5.58,"国企一把手":1.82,"会议室钉子户":1.34,"发量富翁":4.08,"离谱选项爱好者":3.03,"组里的说明书":2.79,"打工人天花板":1.42,"三千点守望者":2.2,"走遍中国":1.92,"行业百晓生":2.02,"羽球健将":2.99,"网球爱好者":2.83,"股神":0.32,"老板的远房亲戚":0.59,"浪里白条":1.69,"学区房战士":0.08,"仲裁赢家":0.18,"对赌人生":2.37,"雪道飞人":0.68,"爆款制造机":1.91,"百公里骑士":2.94,"二胎家庭":0.14,"渔家乐老板":1.82,"冲浪玩家":0.63,"恋爱失败专业户":0.53,"御前红人":0.92,"撸铁人":1.64,"百万粉丝":2.71,"博士":2.17,"普通打工人":0.6,"背锅侠":0.85,"快乐教育派":0.14,"周报文学家":0.44,"神仙眷侣":0.65,"半只脚站队":0.91,"漫展常客":0.07,"鸟人":0.07,"阳朔岩壁":0.58,"前大厂高 P 回流":0.47,"街拍摄影师":0.07,"顶会作者":0.55,"天才少年计划":0.07,"空军终结者":0.07,"工位烘焙师":0.06,"年会弹唱":0.01,"动物园园长":0.03,"读书人":0.01,"周五桌游局":0.05,"阳台园丁":0.04,"地球 Online 全图鉴":0.01,"星空露营者":0.03,"鸡娃家长":0.01,"老司机":0.01,"重点高中家长":0.01,"百鸟图鉴":0.01,"业余摄影展":0.01,"次元壁破壁人":0.01,"便利店老板":0.01}};
+const RARITY = {"e":{"home_good":5.22,"angel":1.22,"home_mid":6.04,"blogger_good":4.42,"shop_mid":2.57,"fish_good":6.44,"nomad_good":5.18,"spinoff":0.07,"soe_mid":3.08,"rest_mid":2.28,"rest_bad":4.82,"civil_mid":3.02,"rest_good":4.7,"fish_mid":4.57,"nomad_mid":2.46,"blogger_mid":6.64,"ai_replaced":0.67,"noncompete":0.82,"exec":2.39,"farm_good":4.63,"abroad":1.31,"bankrupt":1.73,"shop_good":3.15,"fish_bad":0.54,"startup_good":3.29,"phd_mid":0.8,"lottery":0.51,"shop_bad":1.31,"farm_mid":3.45,"civil_good":4.64,"soe_good":1.67,"startup_bad":0.57,"startup_mid":0.92,"phd_good":1.43,"home_bad":0.56,"fire":0.34,"farm_bad":0.41,"blame":0.13,"soe_bad":0.72,"nomad_bad":0.13,"blogger_bad":0.76,"phd_bad":0.07,"civil_bad":0.29,"health":0.05,"burnout":0.01,"foreign":0.01,"fossil":0.01,"moyu":0.01,"gig_good":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"卷王":8.02,"顶格绩效传说":16.42,"A 股贡献者":5.99,"百公里骑士":2.86,"回乡青年":11.82,"小城院子":5.22,"跳槽达人":18.64,"恋爱失败专业户":0.51,"已读不回大师":18.73,"租一辈子也挺好":5.38,"绩效守门员":16.31,"养生系打工人":39.8,"情绪稳定得像个 AI":12.25,"猫奴":25.21,"一号工程元老":21.07,"被割过的韭菜":17.7,"羽球健将":2.84,"岩友":3.08,"仲裁赢家":0.21,"前大厂博主":11.82,"百万粉丝":2.7,"狗爸狗妈":17.13,"旅行爱好者":24.83,"爆款制造机":1.96,"咖啡店主":7.03,"大厂船长":8.58,"渔家乐老板":1.73,"浪里白条":1.71,"半马完赛":6.34,"数字游民":7.76,"地球是我的工位":4.93,"猫狗双全":6.16,"行万里路":5.99,"走遍中国":2.05,"环球旅行家":6.25,"不婚主义者":2.67,"国企人":5.46,"飞盘社交达人":2.7,"间隔年":11.8,"上岸":7.96,"拳击爱好者":2.74,"瑜伽达人":1.74,"背锅侠":1.02,"单身贵族":15.87,"发量富翁":3.76,"梦境客服":8.57,"摸鱼大师":7.23,"离谱选项爱好者":3.21,"租房也要住好点":11.55,"活水之王":9.14,"新农人":8.48,"手艺人":3.16,"撸铁人":1.7,"三千点守望者":2.34,"御前红人":0.78,"连锁老板":3.15,"老板的远房亲戚":0.64,"行业百晓生":1.8,"打工人天花板":1.17,"网球爱好者":2.9,"创业者":4.78,"对赌人生":2.38,"B 轮掌舵人":3.29,"博士":2.23,"地中海":1.65,"房奴":2.4,"奶爸奶妈":1.5,"全马完赛":1.27,"阳朔岩壁":0.58,"合作社带头人":4.28,"字号大一号":0.8,"组里的说明书":2.69,"会议室钉子户":1.57,"工位 CEO":1.09,"前大厂高 P 回流":0.51,"笔杆子":4.64,"国企一把手":1.67,"周报文学家":0.53,"工位烘焙师":0.05,"半只脚站队":0.83,"丁克家庭":1.75,"二胎家庭":0.07,"学区房战士":0.07,"神仙眷侣":0.57,"地球 Online 全图鉴":0.01,"普通打工人":0.7,"顶会作者":0.61,"股神":0.43,"冲浪玩家":0.55,"雪道飞人":0.48,"星空露营者":0.03,"快乐教育派":0.07,"鸟人":0.07,"动物园园长":0.05,"天才少年计划":0.06,"阳台园丁":0.05,"漫展常客":0.07,"街拍摄影师":0.05,"鸡娃家长":0.02,"空军终结者":0.06,"周五桌游局":0.03,"重点高中家长":0.01,"百鸟图鉴":0.01,"业余摄影展":0.01,"次元壁破壁人":0.01,"读书人":0.01,"年会弹唱":0.01,"老司机":0.01,"便利店老板":0.01}};
 function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1(v)}%` : `${Math.round(v)}%`; }
 function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
 function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }

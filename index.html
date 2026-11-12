@@ -141,6 +141,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 @media(max-width:560px){.seg{padding:2px 11px}.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
 .act.more{border-style:dashed;color:var(--mute)}
+.statnote{font-size:11px;color:var(--mute);text-align:center;margin:14px 0 4px;opacity:.8}
 .hotline{font-size:13px;color:var(--mute);border-left:3px solid var(--line);padding:4px 10px;margin:8px 0}
 .ln.hotline .x{font-size:13px;color:var(--mute)}
 .act:hover:not(:disabled){background:var(--paper2)}
@@ -211,6 +212,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .stats div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line)}
 .stats span:first-child{color:var(--mute)}
 </style>
+<!-- WEB-STATS-START --><script defer src="https://cloud.umami.is/script.js" data-website-id="e905f1bd-029a-4062-9a16-c64f2e80c85f"></script><!-- WEB-STATS-END -->
 </head>
 <body>
 <div id="app">
@@ -226,6 +228,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
     <div class="card" id="rollcard"></div>
     <div id="livesbox"></div>
     <div class="gallery" id="gallery"></div>
+    <!-- WEB-STATS-NOTE --><div class="statnote">本站使用匿名访问统计，不收集任何个人信息。</div><!-- /WEB-STATS-NOTE -->
     <div class="btns startbar">
       <button class="btn" id="reroll">重新投胎</button>
       <button class="btn primary" id="go">就这个了，入职！</button>
@@ -546,6 +549,7 @@ function startGame(r){
   if(r.rare) log('', `稀有身份：${r.rare.n}。${r.rare.d}。`,'good');
   meetFriend(pick(s.cohort), '职场发小', true);
   s.rolls = ROLLS; ROLLS = 0; eggCheck();
+  track('开局', {岗位: s.role.n, 性别: s.gender === 'f' ? '女' : '男', 今日开局: s.daily ? '是' : '否', 挑战: s.chal ? '是' : '否', 抽卡次数: s.rolls});
   render();
 }
 
@@ -2103,7 +2107,7 @@ function doAction(i){
   if(a.k==='w' && s.chapter) return;
   if(s[key] || s.queue.length || s.over || s.unemployed) return;
   if(a.c && !a.c()) return;
-  s[key] = true; a.f(); maxCheck(); render();
+  s[key] = true; s.st.acts = s.st.acts || {}; s.st.acts[a.n] = (s.st.acts[a.n]||0) + 1; a.f(); maxCheck(); render();
 }
 
 /* ============ 休假与足迹 ============ */
@@ -2701,6 +2705,16 @@ function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1
 function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
 function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }
 function rarestTitle(list){ let best = null; for(const t of (list||titles())){ const v = RARITY.t[t]; if(v != null && (!best || v < best[1])) best = [t, v]; } return best && best[1] < 30 ? {n:best[0], p:rarePhrase(best[1])} : null; }
+/* ============ 匿名统计：只有网页版加载统计脚本，其他平台调用时什么也不做 ============ */
+const TRACK_Q = [];
+function track(name, data){
+  if(!HAS_DOM) return;
+  try{
+    if(window.umami && umami.track){ while(TRACK_Q.length){ const x = TRACK_Q.shift(); umami.track(x[0], x[1]); } umami.track(name, data); return; }
+    if(TRACK_Q.length < 20) TRACK_Q.push([name, data]);
+    if(!track.timer) track.timer = setInterval(() => { if(window.umami && umami.track){ clearInterval(track.timer); track.timer = null; while(TRACK_Q.length){ const x = TRACK_Q.shift(); umami.track(x[0], x[1]); } } }, 1500);
+  }catch(err){}
+}
 /* ============ 广告（激励视频）：各平台注入 ADS.provider，没有就不显示广告入口 ============ */
 const ADS = { provider: null };   // provider: { ready():bool, showRewarded(name):Promise<bool> }
 function adReady(){ try{ return !!(ADS.provider && ADS.provider.ready()); }catch(err){ return false; } }
@@ -2875,6 +2889,7 @@ function end(k){
   const ep = kidEpilogue(); if(ep) log('后来', ep, 'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
   s.persona = persona(); s.sting = stingLine();
+  { const a = s.st.acts || {}; track('结局', {结局: e.n, 类型: e.t, 年龄: s.age, 季度数: s.st.q, 岗位: s.role.n, 人格: (s.persona && s.persona.n) || '', 家庭: a['家庭']||0, 爱好: a['爱好']||0, 宠物: a['宠物']||0, 休假: a['休假']||0, 运动: a['运动']||0, 已婚: s.flags.married ? '是' : '否', 有孩子: s.flags.kid ? '是' : '否'}); }
   try{ const L5 = pastLives(); L5.unshift(lifeRecord()); STORE.setItem('dc_lives', JSON.stringify(L5.slice(0,5))); }catch(err){}
   try{ const g = JSON.parse(STORE.getItem('dc_titles')||'[]'); s.newTitles = titles().filter(t => !g.includes(t)); if(s.newTitles.length) STORE.setItem('dc_titles', JSON.stringify(g.concat(s.newTitles))); }catch(err){ s.newTitles = []; }
   if(HAS_DOM) render();
@@ -3656,7 +3671,7 @@ function showEnding(){
     <div class="quote">“${s.quote}”</div>
     <div class="btns"><button class="btn primary" id="recapbtn">回看这一生</button><button class="btn" id="sharebtn">生成分享卡</button><button class="btn" id="again">重新投胎</button></div>
     ${canRewind() && adReady() ? '<button class="btn rewindbtn" id="rewind">⏪ 看个广告，回到一年前</button>' : ''}</div>`;
-  $('sharebtn').onclick = showShare;
+  $('sharebtn').onclick = () => { track('生成分享卡'); showShare(); };
   if($('rewind')) $('rewind').onclick = () => showRewarded('rewind').then(ok => {
     if(!ok){ alert('广告没有看完，或者暂时没有广告，稍后再试。'); return; }
     if(doRewind()){ ['ending','recap','share','cohort'].forEach(id => { const el = $(id); if(el) el.hidden = true; }); render(); }
@@ -3673,6 +3688,7 @@ function restartGame(){
   showRoll(); window.scrollTo(0,0);
 }
 function showRecap(rec, past){
+  track(past ? '回看过往人生' : '回看这一生');
   rec = rec || lifeRecord(); const e = {n:rec.n, t:rec.t}, hl = rec.hl;
   const step = Math.min(260, Math.max(90, 5200 / Math.max(1, hl.length)));
   const cls = {good:'var(--green)',bad:'var(--red)',mid:'var(--blue)',hidden:'var(--amber)'}[e.t];
@@ -3704,6 +3720,7 @@ function showRecap(rec, past){
   $('rback').onclick = () => { $('recap').hidden = true; $('ending').hidden = false; };
 }
 function showLives(){
+  track('打开过往人生列表');
   const L5 = pastLives(); if(!L5.length) return;
   const col = t => ({good:'var(--green)',bad:'var(--red)',mid:'var(--blue)',hidden:'var(--amber)'}[t]);
   $('recap').innerHTML = `<div class="rc noanim"><div class="rtop"><h2>过往人生</h2></div><div class="rsub">最近 ${L5.length} 段人生，点开回看高光时刻</div>
@@ -3780,6 +3797,7 @@ async function showShare(){
   $('copytxt').onclick = () => copyOut(shareText(), $('copytxt'));
 }
 function copyOut(t, b){
+  track('复制分享文案');
   {
     const fallback = () => { const ta = $('sharetxt'); ta.value = t; ta.style.display = 'block'; ta.select(); b.textContent = '请手动复制下方文字'; };
     try{ navigator.clipboard.writeText(t).then(() => { b.textContent = '已复制'; }, fallback); }catch(err){ fallback(); }
@@ -3789,7 +3807,8 @@ if(HAS_DOM){
   $('reroll').onclick = () => showRoll();
   $('go').onclick = () => { $('start').hidden = true; $('game').hidden = false; $('dock').hidden = false; startGame(curRoll); };
   $('next').onclick = nextQuarter;
-  try{ const q = new URLSearchParams(location.search); if(q.get('c')) setChallenge(q.get('c'), q.get('e')); }catch(err){}
+  try{ const q = new URLSearchParams(location.search); if(q.get('c')){ setChallenge(q.get('c'), q.get('e')); track('打开挑战链接'); } }catch(err){}
+  window.addEventListener('pagehide', () => { try{ if(s && !s.over && s.st && s.st.q > 0 && !s._leftTracked){ s._leftTracked = true; track('中途离开', {季度数: s.st.q, 年龄: s.age, 岗位: s.role.n}); } }catch(err){} });
   showRoll(true);
 }
 if(typeof module !== 'undefined') module.exports = {roll, startGame, nextQuarter, choose, doAction, getS:()=>s, ACTIONS};

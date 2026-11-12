@@ -905,7 +905,7 @@ function genOffer(boost){
   let x = R()*tot, biz = 0; for(let i=0;i<bw.length;i++){ x -= bw[i]; if(x<0){ biz = i; break; } }
   return {c, lv, biz, mult, pay: Math.round(c.pay[lv]*mult)};
 }
-function offerAsk(of, title, text){
+function offerAsk(of, title, text, onStay){
   const delta = Math.round((of.pay/curPay()-1)*100);
   ask(title, text, [
     {t:`接：${of.c.n} · ${of.c.lv[of.lv]}`, sub:`「${of.c.biz[of.biz][0]}」（${STN[of.c.biz[of.biz][1]]}）· 年包约 ${of.pay} 万（${delta>=0?'+':''}${delta}%）`, f:()=>{
@@ -916,7 +916,7 @@ function offerAsk(of, title, text){
         ]);
       } else joinCompany(of);
     }},
-    {t:'算了，留下', f:()=>L('你把 offer 截图存进了相册，当作底气。', fx({san:3}))},
+    {t:'算了，留下', f:()=>{ if(onStay) onStay(); else L('你把 offer 截图存进了相册，当作底气。', fx({san:3})); }},
   ]);
 }
 function joinCompany(of){
@@ -1229,13 +1229,10 @@ const EVENTS_BASE = [
    {t:'“这和岗位能力有关吗？”', f:()=>L('会议室安静了五秒。后来有同事私下跟你说：“问得好。”', fx({san:3,boss:-3}))},
    {t:'笑着说“暂时没有”', f:()=>L('你笑着说完，回工位后盯着屏幕发了很久的呆。', fx({san:-2}))}])},
  // 换领导：主动选择
- {w:2, f:()=>{ const n = pick(SURN) + pick(GIVN); ask('新老板', `组织架构调整，${n}从别的事业部空降过来当你的老板。第一次周会就说“我们要重新梳理一下”。`, [
-   {t:'主动约 1:1，汇报你手上的事', f:()=>{ const g = has('向上管理大师') || chance(.6); s.boss = g ? rnd(55,70) : rnd(35,50); L(g ? `${n}听完说：“你是组里最清楚业务的人。”` : `${n}一边听一边回消息，最后说：“好的，我了解了。”`, '老板好感重置', g ? 'good' : 'warn'); }},
-   {t:'先观望，看看新老板的风格', f:()=>{ s.boss = rnd(40,55); L('你在群里默默观察了一个月。新老板喜欢数据，不喜欢长文档。三个月后，“重新梳理”的结论是：保持原样。', '老板好感重置'); }},
-   {t:'趁机申请转岗', f:()=>transferMenu()}]); }},
+ {w:2, f:()=>newBoss()},
  {w:()=>s.boss>=65?2:1, f:()=>{ const was = s.boss; ask('老板要走了', '你的老板下周离职，去竞对当总监。走之前他单独约你吃了顿饭：“要不要跟我一起过去？”', [
-   {t:'跟老板走', f:()=>{ const of = genOffer(1.15); s.boss = Math.max(was, 70); offerAsk(of, '跟着老板走', `${of.c.n} 发来 offer，你的前老板会是你的直属上级。`); }},
-   {t:'留下', f:()=>{ s.boss = 50; L('你送了老板一束花。新老板还没定，组里的人都在观望。', was>70 ? fx({san:-4})+' · 你的靠山没了' : '', 'warn'); }}]); }},
+   {t:'跟老板走', f:()=>{ const of = genOffer(1.15); s.boss = Math.max(was, 70); offerAsk(of, '跟着老板走', `${of.c.n} 发来 offer，你的前老板会是你的直属上级。`, () => { s.boss = 50; L('你最后还是没走。老板拍拍你的肩：“有空来找我喝咖啡。”下周一，他的工位空了。', '', 'warn'); later(1, () => newBoss('老板走后的第一个季度，')); }); }},
+   {t:'留下', f:()=>{ s.boss = 50; L('老板的离职邮件发出来了，最后一句是“江湖再见”。你送了他一束花。下周一，他的工位空了，组里的人都在观望。', was>70 ? fx({san:-4})+' · 你的靠山没了' : '', 'warn'); later(1, () => newBoss('老板走后的第一个季度，')); }}]); }},
  // 前领导邀请创业
  {w:()=>(s.lvIdx>=2 && !s.out && s.age<=42 && !s.flags.coInvite)?.9:0, once:1, f:()=>{ s.flags.coInvite = true; const n = pick(SURN) + pick(GIVN);
    ask('前老板的电话', `以前的老板${n}出来创业了，拿到了一笔天使轮：“来当联合创始人吧，给你 5% 的股份，工资先打对折。”`, [
@@ -1351,6 +1348,10 @@ const EVENTS_BASE = [
 ];
 
 /* ============ 幽默：离谱选项 · 黑话翻译 · 日常小事 ============ */
+function newBoss(intro){ const n = pick(SURN) + pick(GIVN); ask('新老板', `${intro || '组织架构调整，'}${n}从别的事业部空降过来当你的老板。第一次周会就说“我们要重新梳理一下”。`, [
+   {t:'主动约 1:1，汇报你手上的事', f:()=>{ const g = has('向上管理大师') || chance(.6); s.boss = g ? rnd(55,70) : rnd(35,50); L(g ? `${n}听完说：“你是组里最清楚业务的人。”` : `${n}一边听一边回消息，最后说：“好的，我了解了。”`, '老板好感重置', g ? 'good' : 'warn'); }},
+   {t:'先观望，看看新老板的风格', f:()=>{ s.boss = rnd(40,55); L('你在群里默默观察了一个月。新老板喜欢数据，不喜欢长文档。三个月后，“重新梳理”的结论是：保持原样。', '老板好感重置'); }},
+   {t:'趁机申请转岗', f:()=>transferMenu()}]); }
 function wild(f){ s.st.wild = (s.st.wild||0) + 1; f(); }
 const cnt = k => { s.st[k] = (s.st[k]||0) + 1; };
 const JARGON = [

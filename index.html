@@ -523,7 +523,7 @@ function startGame(r){
     age, startAge:age, year:2026, q:3, turn:0, compQ:0,
     qs:[], reviews:[], grades:[], sinceProm:0, lowStreak:0, pip:false,
     blame:0, moyu:0, strat:'normal', acted:false, qmod:0, queue:[], pendingFinish:false,
-    flags:{}, cd:{}, cold:0, wave:0, visited:[], sport:{}, sAch:[], pets:[], inv:{bank:0,index:0,stock:0,us:0,pe:0}, juanStreak:0, actedW:false, actedL:false, aiRisk:false, timers:[], optGrant:0, aiVal:1, hunts:0, unemployed:false, over:false,
+    flags:(R()<.4 ? {dating:true, datingAt:-rnd(0,6)} : {}), home:{k: r.fam.money>=300 ? 'nice' : 'share', rent: r.fam.money>=300 ? 3 : .9, since:0}, cd:{}, cold:0, wave:0, visited:[], sport:{}, sAch:[], pets:[], inv:{bank:0,index:0,stock:0,us:0,pe:0}, juanStreak:0, actedW:false, actedL:false, aiRisk:false, timers:[], optGrant:0, aiVal:1, hunts:0, unemployed:false, over:false,
     st:{juan:0,moyuTot:0,q:0,companies:1,transfers:0,top:0,bottom:0,ride:false,promos:0,maxMoney:0}, log:[],
   };
   if(r.rare){
@@ -594,14 +594,16 @@ function nextQuarter(){
   if(s.comp.spinoff && s.spin) spinTick();
   if(s.over) return render();
   if(!arcTick() || chance(.5)) randomEvents();
+  familyTick();
   if(s.queue.length) s.pendingFinish = true; else finishQuarter();
   render();
 }
 
 function economy(){
-  const inc = curPay()/4*.42;
-  const cost = s.fam.cost + (s.flags.house?4:0) + (s.flags.kid?3:0);
+  const inc = curPay()/4*.52;
+  const cost = s.fam.cost + (s.flags.house?4:0) + (s.flags.house2?3:0) + (s.flags.kid?3:0) + (s.flags.kid2?2:0) + (s.flags.eduCost||0) + homeRent();
   s.money = r1(s.money + inc - cost);
+  homeTick();
   if(s.comp.unicorn) s.optGrant += curPay()*.12;
   if(s.money < 0 && invTotal() > 0){
     let need = -s.money;
@@ -1052,14 +1054,16 @@ const EVENTS_BASE = [
    {t:'主动请缨', f:()=>{ if(chance(.6+(s.abi-60)*.01)) L('项目上线，数据亮眼。你的名字出现在了全员邮件里。', fx({hp:-6,qmod:10,abi:3,boss:5}),'good'); else L('项目延期了。你成了那个“负责人”。', fx({hp:-6,qmod:-4,san:-5}),'warn'); }},
    {t:'让给别人', f:()=>L('同事接了，后来升了。', fx({san:1}))}])},
  {w:2, f:()=>L('你被临时抽调去救火另一个项目。', fx({hp:-3,qmod:3,net:2}))},
- {w:()=>(s.age>=25&&s.age<=36&&!s.flags.married)?3.5:0, cd:6, f:()=>ask('求婚','谈了两年的对象问你：“我们什么时候结婚？”',[
-   {t:'结！', f:()=>{ s.flags.married = true; L('你们在年假里办了婚礼。工作群里有人发了 200 块红包。', fx({san:10,money:-15}),'good'); }},
-   {t:'等升完职再说', f:()=>L('对方沉默了。', fx({san:-4}))}])},
+ {w:()=>(s.flags.dating && s.turn-(s.flags.datingAt||0)>=4 && s.age>=24 && s.age<=40)?5:0, cd:4, f:()=>ask('求婚','在一起一段时间了。对象问你：“我们什么时候结婚？”',[
+   {t:'结！', f:()=>marry('你们在年假里办了婚礼。同事们凑了份子，组长发来一段很长的祝福。')},
+   {t:'等升完职再说', f:()=>{ strain(1); if(chance(.35)) breakUp('又过了一个季度，对象说：“我不想再等了。”'); else L('对方沉默了。', fx({san:-4})); }}])},
  {w:()=>(s.money>=150&&!s.flags.house&&s.age>=26)?2.5:0, f:()=>{ const down = Math.round(Math.min(s.money*.7,300)); ask('买房','中介说：“现在是最低点，再不上车就晚了。”',[
    {t:`上车，首付 ${down} 万`, f:()=>{ s.flags.house = true; L('你背上了 30 年房贷，从此每季度还款约 4 万。', fx({money:-down,san:4})); }},
    {t:'再等等', f:()=>L('你继续租房，房东又涨了 300。')}]); }},
  {w:()=>s.fam.parents?3:(s.age>30?1:0), f:()=>L('父亲住院了。你请了一周假，往返了两次老家。', fx({money:-rnd(5,20),san:-5,qmod:-3}),'warn')},
- {w:()=>(s.age>=27&&s.age<=33&&!s.flags.married)?1.5:0, f:()=>L('你妈给你安排了一场相亲。对方问你：“你们公司是 996 吗？”', fx({san:-1}))},
+ {w:()=>(single() && s.age>=26&&s.age<=35)?1.6:0, cd:5, f:()=>ask('相亲','你妈给你安排了一场相亲。对方坐下的第一句话是：“你们公司是 996 吗？”',[
+   {t:'认真聊聊', f:()=>chance(.45) ? startDating('你们从加班聊到老家，又聊到以后想养什么狗。回家路上，你发现自己在笑。') : L('对方说你人挺好，就是“感觉工作占了你太多时间”。', fx({san:-2}))},
+   {t:'吃完饭就走', f:()=>L('你妈打电话来问情况，你说“再说吧”。', fx({san:-1}))}])},
  {w:2, f:()=>L(`CEO 发了一封全员信：“${pick(['我们要始终保持创业心态。','不要躺在过去的功劳簿上。','组织必须保持饥饿感。','今天是第一天，永远是第一天。','我们正处在最好的时代，也处在最危险的时刻。'])}”`, fx({san:-1}))},
  {w:2, f:()=>LP([['内网论坛上，有人匿名爆料某高管的八卦。你吃瓜吃到凌晨一点。',{san:2}],['你在匿名职场社区上看到有人吐槽你们组，评论区吵翻了，有几条说的好像就是你。',{san:-3}],['匿名区有人夸你们组的产品做得好，你偷偷点了个赞。',{san:2}]])},
  {w:()=>lastPv()<.4?3:0, f:()=>L('HR 约你“随便聊聊”，问你“最近状态怎么样”。', fx({san:-4}),'warn')},
@@ -1190,7 +1194,7 @@ const EVENTS_BASE = [
 
  /* ---------- 个人生活 ---------- */
  // 婚育（按性别）
- {w:()=>(s.flags.married && !s.flags.kid && !s.flags.preg && s.age>=26 && s.age<40)?5:0, cd:4, f:()=>{
+ {w:()=>(s.flags.married && !s.flags.kid && !s.flags.preg && s.age>=25 && s.age<40)?6:0, cd:3, f:()=>{
    const f = s.gender === 'f';
    ask('要孩子吗', f ? '另一半说：“我们年纪也不小了。”你看了看下个季度的晋升答辩时间。' : '另一半说：“我们年纪也不小了。”你看了看下个季度的项目排期。', [
      {t:'要', f:()=>{ s.flags.preg = true; s.flags.pregAt = s.turn;
@@ -1286,7 +1290,7 @@ const EVENTS_BASE = [
    {t:'付定金，等尾款', f:()=>{ s.flags.wk = true; L(chance(.5) ? '你定好了尾款闹钟，零点准时付款，成为一名光荣的尾款人。' : '你把付尾款这件事忘了，第二天早上发现定金没了。', fx({money:-.4,san:2})); }},
    {t:'一分不花', f:()=>L('你看着大家晒单，打开了理财 App。余额宝的收益是 3 块 2。', fx({san:-1}))}])},
  {w:()=>(isD11() && s.q===4 && !s.flags.married && s.age>=24)?1.2:0, cd:8, f:()=>ask('光棍节','11 月 11 日也是光棍节。公司工会组织了一场跨部门联谊。',[
-   {t:'去看看', f:()=>{ if(chance(.3)){ s.flags.d11love = true; L('你和隔壁部门的一个人聊得很投缘，散场后又一起吃了宵夜。', fx({san:8,net:3}),'good'); } else L('你吃了很多小龙虾，加了五个微信，后来都没聊过。', fx({san:2,net:2})); }},
+   {t:'去看看', f:()=>{ if(chance(.3)){ s.flags.d11love = true; if(single()) startDating('你和隔壁部门的一个人聊得很投缘，散场后又一起吃了宵夜。从那天起，你们每天中午一起吃饭。'); else L('你和隔壁部门的一个人聊得很投缘，散场后又一起吃了宵夜。', fx({san:8,net:3}),'good'); } else L('你吃了很多小龙虾，加了五个微信，后来都没聊过。', fx({san:2,net:2})); }},
    {t:'在工位上加班', f:()=>L('你一个人在工位上过了光棍节，楼下的外卖小哥比你还忙。', fx({san:-2}))}])},
 
  /* ---------- 限时：春节 ---------- */
@@ -1326,8 +1330,209 @@ const EVENTS_BASE = [
  {w:()=>s.wave?1.5:.4, cd:16, f:()=>{ s.wave = 0; L('行业回暖：几家大厂同时宣布扩招，猎头又开始打电话了。', '裁员风险下降', 'head'); }},
 ];
 
+/* ============ 恋爱 · 婚姻 · 子女 · 住处 ============ */
+const single = () => !s.flags.married && !s.flags.dating;
+const kidAge = () => s.flags.kid ? Math.floor((s.turn - (s.flags.kidAt == null ? s.turn : s.flags.kidAt)) / 4) : -1;
+const ta = () => s.gender === 'f' ? '妈妈' : '爸爸';
+function strain(n){ s.flags.strain = Math.max(0, (s.flags.strain||0) + n); }
+function startDating(msg){ s.flags.dating = true; s.flags.datingAt = s.turn; s.flags.strain = 0; L(msg, fx({san:6}), 'good'); }
+function breakUp(msg){ s.flags.dating = false; s.flags.strain = 0; s.st.breakups = (s.st.breakups||0) + 1; L(msg, fx({san:-8}), 'bad'); }
+function marry(msg){ s.flags.married = true; s.flags.dating = false; s.flags.marriedAt = s.turn; s.flags.strain = 0; L(msg, fx({san:10,money:-15}), 'good milestone'); }
+function divorce(){
+  s.flags.married = false; s.flags.divorced = true; s.flags.strain = 0;
+  const v = r1(Math.max(0, s.money) * .4);
+  if(!s.flags.house){ s.home = {k:'share', rent:HOMES.share.rent, since:s.turn}; }
+  L('你们和平分开了。' + (s.flags.kid ? '孩子跟着另一半，你每两周接一次。' : '你搬回了合租房。'), fx({san:-15, money:-v}), 'bad');
+}
+function buyXqf(down){ s.flags.xqf = true; s.flags.xqfAsk = true; if(s.flags.house) s.flags.house2 = true; s.flags.house = true; eduAdd(2); L('你买了一套四十平米的老房子。楼道里的灯是声控的，要跺两下脚才亮。', fx({money:-down,san:-3})); }
+const eduAdd = n => { s.flags.edu = (s.flags.edu||0) + n; };
+const happyAdd = n => { s.flags.happy = (s.flags.happy||0) + n; };
+const costAdd = n => { s.flags.eduCost = r1((s.flags.eduCost||0) + n); };
+
+// 住处：每季度房租（万）与对状态的影响
+const HOMES = {
+  share:{n:'合租单间', rent:.9, san:-.6, hp:0,   d:'和三个陌生人共用一个卫生间'},
+  far:  {n:'远郊一居', rent:1.1, san:-.2, hp:-.6, d:'通勤单程一个半小时'},
+  near: {n:'公司附近一居', rent:1.9, san:.3, hp:.4, d:'步行十分钟到工位'},
+  nice: {n:'品质小区两居', rent:3, san:.9, hp:.3, d:'有阳台，楼下有花园'},
+};
+const homeRent = () => s.flags.house ? 0 : (s.home ? s.home.rent : 0);
+const monthly = r => Math.round(r * 10000 / 3 / 100) * 100;
+function homeTick(){
+  if(s.flags.house || !s.home) return;
+  const h = HOMES[s.home.k];
+  s.san = clamp(s.san + h.san + (s.home.k === 'share' && s.flags.married ? -.8 : 0)); s.hp = clamp(s.hp + h.hp);
+}
+function kidEpilogue(){
+  if(!s.flags.kid) return '';
+  const e = s.flags.edu||0, h = s.flags.happy||0;
+  if(e >= 5 && h < 2) return '很多年后，孩子考上了一所很好的大学。毕业那天，TA 对你说：“我想先休息一年。”';
+  if(e >= 3 && h >= 3) return '很多年后，孩子考上了不错的大学，也交到了很多朋友。TA 说，小时候最喜欢的就是周六。';
+  if(h >= 3) return '很多年后，孩子成了一个开朗的人，在一家小公司做着喜欢的工作，每周都给你打一次电话。';
+  if(s.flags.keyHS || e >= 3) return '很多年后，孩子去了外地读大学。你帮 TA 把行李搬上火车，回来的路上一句话也没说。';
+  return '很多年后，孩子也成了一名打工人。入职那天，TA 给你发来一张工牌的照片。';
+}
+function lifeLabel(){
+  if(s.chapter) return '';
+  const p = [s.flags.house ? '有房' : (s.home ? HOMES[s.home.k].n : '')];
+  if(s.flags.married) p.push('已婚'); else if(s.flags.dating) p.push('恋爱中');
+  if(s.flags.kid) p.push(s.flags.kid2 ? `两个孩子` : `孩子 ${Math.max(0,kidAge())} 岁`);
+  return p.filter(Boolean).join(' · ');
+}
+function moveTo(k, msg){
+  const h = HOMES[k];
+  s.home = {k, rent: r1(h.rent * rf(.95, 1.1) * (s.flags.married || s.flags.kid ? 1.2 : 1)), since: s.turn};
+  L(msg || `你搬进了${h.n}。${h.d}。`, `房租每月约 ${monthly(s.home.rent)} 元 · 搬家 −0.5 万`); s.money = r1(s.money - .5);
+}
+
+// 茶水间传闻：小程序版会把这些句子替换成更温和的写法
+const BOSS_TXT = {
+  rumor:'茶水间里有人压低声音说：老板和隔壁组的一位总监走得很近，近得不像同事。有人周末在商场里撞见过他们。',
+  talk:'你说了一句“难怪他们开会总坐在一起”。说完你就有点后悔。',
+  leave:'老板的爱人来公司楼下等他，前台的人都看见了。第二天，老板请了两周假，周会没人主持。',
+  leak:'老板回来后找你谈话：“听说有些话是从你这儿传出去的？”你说不是，但他已经不信了。',
+  move:'一个月后，老板被调去了一个边缘部门，那位总监也离职了。没有任何公告，你们组换了新老板。',
+  back:'老板回来了，戒指不见了，脾气比以前差了很多。周会上，他把一个方案连着否了三次。',
+};
+function bossGossip(talked){
+  later(2, () => ask('老板请假了', BOSS_TXT.leave, [
+    {t:'主动顶上，主持周会', f:()=>{ L('你主持了三次周会，把几个拖了很久的决定推了下去。隔壁组的总监开始叫你一起吃饭。', fx({qmod:6,hp:-3,net:3})); bossGossipEnd(talked, true); }},
+    {t:'按部就班，等老板回来', f:()=>{ L('组里的事停了两周，大家都在等。', fx({qmod:-2})); bossGossipEnd(talked, false); }}]));
+}
+function bossGossipEnd(talked, stepped){
+  later(3, () => {
+    if(chance(.45)){ TW(BOSS_TXT.move); s.boss = clamp(50 + (stepped ? 12 : 0)); if(stepped) L('新老板第一次一对一就说：“听说上个月组里是你在撑着。”', fx({san:4}), 'good'); }
+    else { if(talked && chance(.5)) L(BOSS_TXT.leak, fx({boss:-10,san:-6}), 'bad'); else L(BOSS_TXT.back, fx({san:-3,boss:stepped?-2:0})); }
+  });
+}
+
+// 人生节点（恋爱、孩子的各个阶段、换房）不和普通随机事件抢位置：每季度单独有机会出现一个
+function familyTick(){
+  allEvents(); if(s.over || s.unemployed || s.chapter || s.queue.length > 1 || !chance(.55)) return;
+  const wf = e => typeof e.w === 'function' ? e.w() : e.w;
+  const ok = e => { const last = s.cd[e.id]; if(last != null && (e.once || s.turn - last < (e.cd||8))) return false; return wf(e) > 0; };
+  const pool = FAMILY_EVENTS.filter(ok);
+  if(pool.length){ const e = wpick(pool, wf); s.cd[e.id] = s.turn; e.f(); }
+}
+const FAMILY_EVENTS = [
+ /* ---------- 恋爱 ---------- */
+ {w:()=>(single() && s.age>=23 && s.age<=36)?2.6:0, cd:5, f:()=>ask('有人给你介绍对象', pick(['隔壁组的同事说：“我有个朋友，人挺好的，要不要见见？”','大学室友在电话里说：“我爱人单位的同事，跟你特别配。”','你妈说：“你王阿姨的外甥，也在你们那个城市。”']), [
+   {t:'见一面', f:()=>chance(.5 + (s.san-50)*.004) ? startDating('你们约在公司附近的咖啡店。本来说好喝杯咖啡，结果一直聊到商场关门。') : L(pick(['对方很好，但你们聊不到一块去。','见面那天你被临时拉去开会，迟到了一个小时。对方后来没再回消息。','吃到一半，你接了两个工作电话。对方说：“你先忙。”']), fx({san:-2}))},
+   {t:'最近太忙，算了', f:()=>L('你回了句“下次一定”。', fx({san:-1}))}])},
+ {w:()=>(single() && s.age>=23 && s.age<=34 && s.st.q>=4)?.7:0, cd:10, f:()=>ask('楼下的咖啡店', '你连续一个月在楼下咖啡店遇到同一个人。今天只剩一个座位，在 TA 对面。', [
+   {t:'坐过去，打个招呼', f:()=>chance(.5) ? startDating('你们从“你也在这栋楼上班？”聊起。后来每天早上，TA 会多点一杯美式。') : L('TA 礼貌地笑了笑，戴上了耳机。', fx({san:-1}))},
+   {t:'打包带走', f:()=>L('第二天，TA 没再出现。', fx({san:-1}))}])},
+ {w:()=>s.flags.dating?2.4:0, cd:4, f:()=>ask('约会', '你们约好周六去看展。周五晚上十点，老板在群里说：“明天上线，大家辛苦一下。”', [
+   {t:'跟老板说有事，不去了', f:()=>L('你关掉了消息提醒，看了一整天的展。周一老板没说什么，但也没再找你。', fx({san:6,boss:-3}))},
+   {t:'跟对象道歉，回公司', f:()=>{ strain(1); if((s.flags.strain||0) >= 3 && chance(.5)) breakUp('对象说：“我好像总是排在你的工作后面。”你们分手了。'); else L('对象说“没事”。但你知道，这已经不是第一次了。', fx({san:-4,qmod:3})); }}])},
+ {w:()=>(s.flags.dating && !s.flags.metParents && s.turn-(s.flags.datingAt||0)>=3)?2:0, cd:4, f:()=>ask('见家长', '对象说：“我爸妈想见见你。”', [
+   {t:'郑重准备', f:()=>{ s.flags.metParents = true; L('你提着水果和茶叶，在对方家里吃了一顿很长的饭。对方妈妈问了三遍你的工作稳不稳定。', fx({money:-.5,san:-2})); }},
+   {t:'再等等，还没准备好', f:()=>{ strain(1); L('对象说：“好吧。”语气不太好。', fx({san:-2})); }}])},
+ {w:()=>(s.flags.dating && !s.flags.ldrDone)?.6:0, cd:8, f:()=>ask('异地', '对象拿到了一个外地的好机会，要去两年。', [
+   {t:'支持，先异地', f:()=>{ s.flags.ldrDone = true; L('你们开始每晚视频。你开着视频加班，TA 开着视频做饭。', fx({san:-3})); later(8, ()=>{ if(s.flags.dating) L('两年过去，对象回来了。你去高铁站接站，紧张得像第一次约会。', fx({san:8}), 'good'); }, true); }},
+   {t:'劝对方别去', f:()=>{ s.flags.ldrDone = true; if(chance(.5)){ strain(2); L('对方留了下来，但之后偶尔会提起那个机会。', fx({san:-2})); } else breakUp('对方还是去了。几个月后，你们在一次视频里平静地说了分开。'); }}])},
+
+ /* ---------- 婚姻 ---------- */
+ {w:()=>s.flags.married?(s.strat==='juan'?2.2:.7):0, cd:6, f:()=>ask('冷战', '你已经连续一个月十点以后才到家。某天晚上，另一半说：“我们聊聊。”', [
+   {t:'请几天年假，一起出去走走', f:()=>{ strain(-2); L('你们去了一趟海边。回来的高铁上，你们聊起了刚认识的时候。', fx({money:-3,san:8,qmod:-3})); }},
+   {t:'“最近项目紧，过了这阵就好”', f:()=>{ strain(1); L('另一半没再说话。那天晚上，你们背对背睡着。', fx({san:-5})); }}])},
+ {w:()=>(s.flags.married && (s.flags.strain||0)>=4)?3:0, cd:8, f:()=>ask('婚姻亮起红灯', '另一半把一张打印好的纸放在桌上：“我认真想过了。”', [
+   {t:'去做婚姻咨询，再试一次', f:()=>{ if(chance(.55)){ s.flags.strain = 1; L('咨询师让你们每周留一个晚上，不看手机。你们坚持了下来。', fx({money:-2,san:4}), 'good'); } else divorce(); }},
+   {t:'尊重对方的决定', f:()=>divorce()}])},
+ {w:()=>(s.flags.married && !s.flags.moveAsk)?.6:0, cd:8, f:()=>{ s.flags.moveAsk = true; ask('另一半要调去外地', '另一半的公司在外地开新分部，想让 TA 去当负责人。', [
+   {t:'支持，周末两地跑', f:()=>{ L('你开始每周五坐高铁过去，周日晚上回来。高铁上你还在回消息。', fx({hp:-3,san:-2})); later(8, ()=>{ if(s.flags.married) L('两年期满，另一半调回来了。', fx({san:6}), 'good'); }, true); }},
+   {t:'申请调去那边的办公室', f:()=>chance(.4+(s.boss-50)*.01) ? L('老板居然批了。你们在新城市租了一套带阳台的房子。', fx({san:8,net:-6,qmod:-2}), 'good') : L('申请被驳回了：“那边没有你这个岗位。”', fx({san:-4}))},
+   {t:'请对方放弃这个机会', f:()=>{ strain(2); L('另一半推掉了。后来 TA 的新领导，正是当初顶替去的那个人。', fx({san:-3})); }}]); }},
+ {w:()=>(s.flags.married && s.q===1)?1.6:0, cd:4, f:()=>ask('春节回谁家', '又到春节了。两边的父母都打电话来问：“今年回来吗？”', [
+   {t:'回你家', f:()=>{ strain(1); L('你爸妈很高兴。另一半在你家客厅里刷了三天手机。', fx({san:2})); }},
+   {t:'回对方家', f:()=>L('你在对方老家被亲戚们轮流问了一圈收入。', fx({san:-2}))},
+   {t:'两家各待几天', f:()=>L('你们在高速上开了二十个小时的车。', fx({hp:-3,san:1,money:-1}))}])},
+
+ /* ---------- 子女 ---------- */
+ {w:()=>(s.flags.kid && kidAge()>=1 && kidAge()<=3 && !s.flags.early)?2.4:0, cd:2, f:()=>{ s.flags.early = true; ask('早教班', '商场里的早教中心在做体验课。销售说：“0 到 3 岁是大脑发育的黄金期。”', [
+   {t:'报一年', sub:'约 2 万', f:()=>{ eduAdd(1); L('每周日上午，你陪孩子在早教中心爬来爬去。你觉得自己学到的比孩子多。', fx({money:-2,san:1})); }},
+   {t:'不报，周末去公园', f:()=>{ happyAdd(1); L('孩子在公园里追了一下午的鸽子。', fx({san:3})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=2 && kidAge()<=3 && !s.flags.kg)?3:0, cd:2, f:()=>{ s.flags.kg = true; ask('上哪个幼儿园', '孩子快三岁了，该上幼儿园了。', [
+   {t:'小区里的公办园', sub:'便宜，但要摇号', f:()=>{ if(chance(.55)){ happyAdd(1); L('摇中了！幼儿园就在楼下，孩子每天第一个到。', fx({san:4}), 'good'); } else { costAdd(1); L('没摇中，只能去了一家普惠私立园。', fx({san:-2})); } }},
+   {t:'双语幼儿园', sub:'每月约 8000 元', f:()=>{ costAdd(2.5); eduAdd(1); L('三个月后，孩子回家说了一句“I am hungry”。全家都很激动。', fx({san:1})); }},
+   {t:'让老人再带一年', f:()=>{ happyAdd(1); L('孩子每天跟着老人去菜市场，学会了讲价。', fx({san:1})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=2 && kidAge()<=6 && !s.flags.xqfAsk && !s.flags.xqf && s.money>=100)?2:0, cd:4, f:()=>{ s.flags.xqfAsk = true;
+   const down = Math.round(Math.min(Math.max(s.money*.7, 100), 400));
+   ask('学区房', '中介说：“这套房对口区里最好的小学。现在不买，等孩子上学就来不及了。”你看了看，四十平米，九十年代的老楼。', [
+     {t:`买，首付 ${down} 万`, sub:s.flags.house ? '还要再背一份房贷' : '从此告别房租', f:()=>buyXqf(down)},
+     {t:'不买，学校没那么重要', f:()=>{ happyAdd(1); L('你关掉了中介的对话框。后来几年，家长群里每次聊到学区，你都没说话。', fx({san:1})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()<=4)?2.4:0, cd:4, f:()=>ask('孩子发烧了', '凌晨两点，孩子烧到了 39 度。早上十点，你有一个很重要的评审会。', [
+   {t:'带孩子去医院，评审请假', f:()=>L('你在儿童医院排了四个小时的队。评审改到了下周，老板的语气有点冷。', fx({hp:-3,san:2,boss:-3,qmod:-2}))},
+   {t:'让家里人带去，自己去开会', f:()=>{ if(s.flags.married) strain(1); L('评审很顺利。你在会议间隙看了十几次手机。', fx({san:-5,qmod:3})); }}])},
+ {w:()=>(s.flags.kid && !s.flags.care && kidAge()>=0)?4:0, cd:2, f:()=>ask('谁来带孩子', '假期用完了，孩子还不到两岁。', [
+   {t:'请老人过来帮忙', sub:'省钱，但家里多了一套规矩', f:()=>{ s.flags.care = 'grand'; L('爸妈搬了过来。从此，家里关于“该穿几件衣服”的争论没有停过。', fx({san:-2})); }},
+   {t:'请一个育儿阿姨', sub:'每月约 1 万', f:()=>{ s.flags.care = 'nanny'; costAdd(3); L('阿姨很靠谱。每次发工资，你先转一大笔给她。', fx({san:3})); }},
+   {t:'送托育园，下班自己接', sub:'每月约 5000 元 · 得准时下班', f:()=>{ s.flags.care = 'self'; costAdd(1.5); L('你开始每天六点准时下班。同事们看你的眼神有点复杂。', fx({qmod:-3,san:1})); }}])},
+ {w:()=>(s.flags.kid && kidAge()>=4 && kidAge()<=6 && !s.flags.prep)?3:0, cd:2, f:()=>{ s.flags.prep = true; ask('幼小衔接', '家长群里都在说：“不上幼小衔接，一年级会跟不上。”', [
+   {t:'报一个', sub:'一年约 2 万', f:()=>{ eduAdd(1); L('孩子开始每周六去学拼音和算术。你每周六早上八点起床送。', fx({money:-2,san:-1})); }},
+   {t:'不报，让孩子多玩一年', f:()=>{ happyAdd(1); L('孩子在小区里交了一群朋友，晒得很黑。', fx({san:3})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=5 && kidAge()<=7 && !s.flags.school)?3.5:0, cd:2, f:()=>{
+   s.flags.school = true;
+   const down = Math.round(Math.min(Math.max(s.money*.7, 120), 400));
+   const o = [];
+   if(s.money >= 120 && !s.flags.xqf && !s.flags.xqfAsk) o.push({t:`买学区房，首付 ${down} 万`, sub:'老破小，但对口好学校', f:()=>buyXqf(down)});
+   o.push({t:'上民办学校', sub:'每月约 8000 元', f:()=>{ costAdd(2.5); eduAdd(1); L('入学面试那天，比孩子更紧张的是你。', fx({san:-2})); }});
+   o.push({t:'就近上公办', f:()=>{ happyAdd(1); L('学校离家走路十分钟。孩子每天自己走回家。', fx({san:2})); }});
+   ask('择校', '孩子明年就要上小学了。家长群里每天都在讨论学区和摇号。', o); }},
+ {w:()=>(s.flags.kid && kidAge()>=3 && kidAge()<=15)?1.8:0, cd:6, f:()=>{ const pre = kidAge() < 6; ask(pre ? '亲子活动' : '家长会', pre ? '幼儿园通知周三下午开亲子运动会，“请家长务必参加”。周三下午你有季度复盘。' : '班主任通知周三下午开家长会，“请家长务必出席”。周三下午你有季度复盘。', [
+   {t:pre ? '去参加' : '去家长会', f:()=>L(pre ? pick(['你和孩子一起跑了两人三足，摔了一跤，孩子笑得停不下来。','你是全场唯一一个边跑边接电话的家长。']) : pick([`孩子的作文《我的${ta()}》里写着：“${ta()}的工作是开会。”`, '老师说孩子上课爱说话，但作文写得很好。', '你坐在孩子的小椅子上，膝盖顶到了桌子。']), fx({san:3,qmod:-2}))},
+   {t:s.flags.married?'让另一半去':'请老人去', f:()=>{ if(s.flags.married) strain(1); L(s.flags.married ? '另一半回来说：“老师问，怎么每次都是我来。”' : '老人回来说，老师讲了很多，没记住。', fx({san:-2})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=6 && kidAge()<=12)?2:0, cd:4, f:()=>ask('辅导作业', '晚上九点半，孩子的数学作业还剩三页。你还有一个方案没写完。', [
+   {t:'陪孩子写完', f:()=>{ eduAdd(1); L(pick(['你讲了五遍鸡兔同笼，最后自己也不确定了。','孩子写完了。你的方案拖到了凌晨一点。']), fx({san:-3,hp:-2})); }},
+   ...(!s.flags.night ? [{t:'报一个晚托班', sub:'每月约 3000 元', f:()=>{ s.flags.night = true; costAdd(1); L('晚托班的老师比你有耐心多了。', fx({san:2})); }}] : []),
+   {t:'“写不完就算了，先睡觉”', f:()=>{ happyAdd(1); L('第二天，老师在家长群里点了孩子的名字。', fx({san:-1})); }}])},
+ {w:()=>(s.flags.kid && kidAge()>=4 && kidAge()<=12 && (s.flags.clubs||0)<2)?1.6:0, cd:8, f:()=>{
+   const club = (n, c, k) => ({t:n, sub:`每月约 ${monthly(c)} 元`, f:()=>{ s.flags.clubs = (s.flags.clubs||0)+1; costAdd(c); if(k==='e') eduAdd(1); else happyAdd(1); L(k==='e' ? `孩子开始学${n}。你每周的日程里多了一格接送。` : `孩子开始打${n}，每周回家都是一身汗。`, fx({san:1})); }});
+   ask('兴趣班', kidAge() < 6 ? '幼儿园门口每天都有人发兴趣班的传单。孩子说想学——' : '孩子的同学都在上兴趣班。孩子说想学——', [club('钢琴', 1.5, 'e'), club('编程', 1.5, 'e'), club('篮球', .8, 'h'),
+     {t:'先不报，周末带孩子出去玩', f:()=>{ happyAdd(1); L('你们去了郊外的一个农场。孩子第一次见到了真的奶牛。', fx({san:3,qmod:-1})); }}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=4 && kidAge()<=10 && !s.flags.askHome)?1.6:0, cd:4, f:()=>{ s.flags.askHome = true; ask('睡前的一个问题', `睡前，孩子问你：“${ta()}，你为什么总不在家？”`, [
+   {t:'“以后每个周六都陪你”', f:()=>{ L('你在日历上把每个周六都标成了灰色。', fx({san:4,qmod:-2})); later(4, ()=>{ if(s.strat==='juan') L('这个季度，你只陪了孩子两个周六。孩子没再问那个问题了。', fx({san:-6}), 'warn'); else { happyAdd(1); L('你们去了动物园、科技馆，还爬了两次山。孩子画了一张画，上面是你们俩。', fx({san:6}), 'good'); } }, true); }},
+   {t:`“${ta()}在努力赚钱”`, f:()=>L('孩子“哦”了一声，翻身睡了。', fx({san:-3}))}]); }},
+ {w:()=>(s.flags.married && s.flags.kid && !s.flags.kid2Ask && kidAge()>=3 && kidAge()<=8 && s.age<=41)?1.2:0, cd:4, f:()=>{ s.flags.kid2Ask = true; ask('要二胎吗', '老大上了幼儿园。家里人开始旁敲侧击：“一个孩子太孤单了。”', [
+   {t:'要', f:()=>{ L(s.gender==='f' ? '你又怀孕了。这一次，你知道接下来会发生什么。' : '另一半又怀孕了。你默默把车换成了七座的。', fx({san:-2})); s.timers.push({at:s.turn+3, f:()=>{ if(s.over) return; s.flags.kid2 = true; L('老二出生了。老大趴在床边看了很久，说：“它好小。”', fx({san:8,money:-5,qmod:s.gender==='f'?-10:-2}), 'good milestone'); }}); }},
+   {t:'一个就够了', f:()=>L('你们把婴儿床送给了刚生孩子的同事。', fx({san:1}))}]); }},
+ {w:()=>(s.flags.kid && kidAge()>=12 && kidAge()<=17)?1:0, cd:8, f:()=>ask('青春期', '孩子把房门关上了。门上贴着一张纸：“进来请敲门”。', [
+   {t:'敲门，进去聊聊', f:()=>L(chance(.5) ? '孩子说起了班上的事，你们聊到了半夜。' : '孩子说：“你不懂。”你确实不太懂。', fx({san:1}))},
+   {t:'给孩子一点空间', f:()=>L('你在门外站了一会儿，回客厅打开了电脑。', fx({san:-1}))}])},
+ {w:()=>(s.flags.kid && kidAge()>=12 && !s.flags.exam12)?6:0, f:()=>{ s.flags.exam12 = true;
+   const sc = (s.flags.edu||0) + (s.flags.xqf?1:0) + rf(-1.5, 2.5);
+   if(sc >= 4.5) L('小升初放榜，孩子进了一所很好的初中。你在家族群里转发了录取通知。', fx({san:6}), 'good');
+   else if((s.flags.happy||0) >= 3) L('孩子去了离家最近的初中。成绩不算拔尖，但每天放学回来都是笑着的。', fx({san:3}));
+   else L('孩子进了一所普通初中。你开始在家长群里研究课外班。', fx({san:-1})); }},
+ {w:()=>(s.flags.kid && kidAge()>=15 && !s.flags.exam15)?6:0, f:()=>{ s.flags.exam15 = true;
+   const sc = (s.flags.edu||0) + (s.flags.xqf?1:0) + rf(-1.5, 2.5);
+   if(sc >= 6){ s.flags.keyHS = true; L('中考放榜，孩子考上了重点高中。查分那天，你比自己当年还紧张。', fx({san:10}), 'good milestone'); }
+   else L('孩子考上了一所普通高中。孩子说：“我会努力的。”你说：“你已经很努力了。”', fx({san:2})); }},
+
+ /* ---------- 住处 ---------- */
+ {w:()=>(!s.flags.house && s.home && s.turn - s.home.since >= 8)?2.6:0, cd:6, f:()=>{
+   const h = HOMES[s.home.k], up = r1(s.home.rent * rf(.05, .12)), big = s.flags.married || s.flags.kid;
+   const o = [{t:`续租，房租每月涨 ${monthly(up)} 元`, f:()=>{ s.home.rent = r1(s.home.rent + up); s.home.since = s.turn; L('你在新合同上签了字。', fx({san:-1})); }}];
+   if(s.home.k !== 'near') o.push({t:'搬到公司附近', sub:`月租约 ${monthly(HOMES.near.rent*(big?1.2:1))} 元 · 通勤十分钟`, f:()=>moveTo('near')});
+   if(s.home.k !== 'nice' && s.money >= 30) o.push({t:'换一个好点的小区', sub:`月租约 ${monthly(HOMES.nice.rent*(big?1.2:1))} 元 · 心情会好很多`, f:()=>moveTo('nice')});
+   if(s.home.k !== 'far') o.push({t:'搬远一点，便宜不少', sub:`月租约 ${monthly(HOMES.far.rent*(big?1.2:1))} 元 · 通勤一个半小时`, f:()=>moveTo('far')});
+   if(s.home.k !== 'share' && !big) o.push({t:'找人合租，省钱', sub:`月租约 ${monthly(HOMES.share.rent)} 元`, f:()=>moveTo('share')});
+   ask('房租到期', `你住的${h.n}合同快到期了。房东说：“下个月起，房租要涨一点。”`, o); }},
+ {w:()=>(!s.flags.house && s.home && s.home.k==='share' && (s.flags.married || s.flags.kid))?4:0, cd:3, f:()=>ask('该换房子了', s.flags.kid ? '孩子要出生了，合租的房子实在住不下。' : '结婚以后还住在合租房里，另一半每天早上都要排队用卫生间。', [
+   {t:'搬到公司附近的两居', sub:`月租约 ${monthly(HOMES.near.rent*1.2)} 元`, f:()=>moveTo('near')},
+   {t:'搬到远郊，空间大一点', sub:`月租约 ${monthly(HOMES.far.rent*1.2)} 元 · 通勤一个半小时`, f:()=>moveTo('far')}])},
+ {w:()=>(!s.flags.house && s.home && s.home.k==='share')?1.2:0, cd:6, f:()=>LP([['合租的室友凌晨两点在客厅打游戏，你戴着耳塞睡了一夜。',{san:-3}],['冰箱里你的酸奶又被人喝了。',{san:-2}],['新搬来的室友会做饭，周末给大家炖了一锅排骨。',{san:3}]])},
+ {w:()=>(!s.flags.house && s.home && s.home.k==='far')?1.2:0, cd:6, f:()=>LP([['早高峰地铁停运了半小时，你迟到了，被记了一次考勤。',{san:-3,qmod:-1}],['你在通勤的地铁上读完了一本书。',{san:2}],['每天来回三个小时。你算了一下，一年有一个多月在地铁上。',{hp:-2,san:-2}]])},
+ {w:()=>(!s.flags.house && s.home && s.home.k==='nice')?.8:0, cd:8, f:()=>L('周末你在阳台上晒着太阳喝咖啡，楼下的花园里有小孩在放风筝。', fx({san:3}))},
+
+ /* ---------- 茶水间的传闻 ---------- */
+ {w:()=>(s.turn>=6 && !s.flags.bossGossip)?.7:0, once:1, f:()=>{ s.flags.bossGossip = true; ask('茶水间的传闻', BOSS_TXT.rumor, [
+   {t:'不听，也不传', f:()=>{ L('你端着杯子回了工位。', fx({san:1})); bossGossip(false); }},
+   {t:'跟着聊了两句', f:()=>{ L(BOSS_TXT.talk, fx({net:2})); bossGossip(true); }}]); }},
+];
+
 let EVENTS = null;
-function allEvents(){ if(!EVENTS){ EVENTS = EVENTS_BASE.concat(FRIEND_EVENTS); EVENTS.forEach((e,i) => { e.id = e.id || 'e'+i; }); } return EVENTS; }
+function allEvents(){ if(!EVENTS){ EVENTS = EVENTS_BASE.concat(FRIEND_EVENTS, FAMILY_EVENTS); EVENTS.forEach((e,i) => { e.id = e.id || 'e'+i; }); } return EVENTS; }
 function randomEvents(){
   const wf = e => typeof e.w==='function' ? e.w() : e.w;
   const ok = e => {
@@ -1528,6 +1733,7 @@ const ACTIONS = [
   /* 生活 */
   {k:'l', n:'休假', f:()=>vacationMenu()},
   {k:'l', n:'运动', f:()=>sportMenu()},
+  {k:'l', n:'爱好', f:()=>hobbyMenu()},
   {k:'l', n:'约朋友', f:()=>{ const i = rnd(0,2); if(i === 1) s.contacts = (s.contacts||0) + 20; L(['你约了几个老同学吃火锅，聊到十二点。','你去参加了一个行业沙龙，加了二十个微信。','你和前同事打了一下午羽毛球。'][i], fx({net:4,san:4,money:-.3}) + ' · 人脉以后会在找工作、晋升、遇到麻烦时帮上忙'); }},
   {k:'l', n:'宠物', f:()=>petMenu()},
   {k:'l', n:'投资理财', f:()=>investMenu()},
@@ -1819,6 +2025,48 @@ const SPORTS = [
    m:{1:['你在海边上了第一节冲浪课，喝了半片海的水。'],3:['你第一次稳稳地站上了浪，那几秒像一辈子那么长。',{san:5},'冲浪玩家']},
    g:['你在海边晒成了小麦色，回公司被问是不是去出差了。','等浪的时候，你在板子上看了半小时的海。'], risk:.05, hurt:'被冲浪板撞了一下，额头肿了个包。'},
 ];
+/* ============ 爱好（非运动类） ============ */
+const HOBBIES = [
+  {k:'bird', n:'观鸟', c:.3, fx:{san:6,hp:1},
+   m:{1:['你买了一副望远镜，周末早上六点去了城郊的湿地公园。看了两个小时，只认出了麻雀。',{money:-.5}],3:['你在公园的芦苇丛里拍到了一只翠鸟。观鸟群里有人回复：“今年本地第一笔记录！”',{san:5},'鸟人'],6:['你的观鸟记录突破了 100 种。你开始能听声音辨鸟了。',{san:6},'百鸟图鉴']},
+   g:['你在楼下的树上发现了一窝白头鹎，每天上班前都要看一眼。','观鸟的时候不能看手机，这是你一周里最安静的两个小时。','你和一群退休的阿姨叔叔蹲了一上午，就为了等一只戴胜。'], risk:0},
+  {k:'photo', n:'摄影', c:1, fx:{san:6,net:1},
+   m:{1:['你咬咬牙买了一台微单。说明书比你的需求文档还厚。',{money:-3}],3:['你拍的一张城市夜景被一个摄影号转发了，评论区有人问你用的什么镜头。',{san:4,net:2},'街拍摄影师'],5:['你办了一场小小的摄影展，就在朋友的咖啡店里。来了三十多个人。',{san:6,net:4},'业余摄影展']},
+   g:['你开始注意到下班路上的光。原来傍晚六点的写字楼是金色的。','你花了一个周末修图，比上班还认真。','你给同事们拍了一组工位照，被 HR 拿去做了招聘海报。'], risk:0},
+  {k:'acg', n:'二次元', c:.5, fx:{san:8},
+   m:{1:['你重新捡起了小时候看的动画。追完一季，你在工位上哼了一整天的片头曲。'],3:['你第一次去漫展，排了两个小时的队，买到了限定周边。',{money:-1,san:5},'漫展常客'],5:['你和同好们一起出了一次 cos。照片发出去以后，组里的实习生说：“原来你也是！”',{san:6,net:3},'次元壁破壁人']},
+   g:['你的工位上多了一排手办，路过的同事总要停下来看两眼。','新番更新那天，你准时下班了。','你在会议室白板上画了一个角色，下一个开会的人没舍得擦。'], risk:0},
+  {k:'camp', n:'露营', c:.8, fx:{san:7,hp:2},
+   m:{1:['你买齐了帐篷、天幕和折叠椅，第一次露营就下了雨。',{money:-1.5}],3:['你在山里的营地看到了银河。你已经很多年没见过这么多星星了。',{san:6},'星空露营者']},
+   g:['在营地里，手机没有信号。你居然一点也不焦虑。','你学会了在野外煮咖啡，比公司楼下的好喝。'], risk:.02, hurt:'夜里降温，你冻感冒了。'},
+  {k:'fish', n:'钓鱼', c:.3, fx:{san:7},
+   m:{1:['你跟着楼下的大爷去水库钓鱼，坐了一天，钓上来一条巴掌大的鲫鱼。'],3:['你钓到了一条三斤的大鲤鱼，拍照发到了家族群里。',{san:4},'空军终结者']},
+   g:['钓了一整天，一条没上钩。但你觉得这一天过得很值。','你坐在水边，脑子里第一次什么都没想。'], risk:0},
+  {k:'read', n:'读书', c:.1, fx:{san:5,abi:1},
+   m:{1:['你给自己定了一个目标：一个月读一本书。'],4:['你今年读完了十二本书。有几本让你重新想了想自己在做的事。',{san:4,abi:2},'读书人']},
+   g:['你在通勤的地铁上读完了一章，差点坐过站。','睡前读书代替了刷手机，你睡得早了一点。'], risk:0},
+  {k:'bake', n:'烘焙', c:.3, fx:{san:6,net:1},
+   m:{1:['你烤的第一个戚风蛋糕塌了，但全家都说好吃。'],3:['你带了一盒自己做的曲奇去公司，下午就被抢光了。',{net:3},'工位烘焙师']},
+   g:['周末的厨房里都是黄油的香味。','揉面的时候，你什么都不用想。'], risk:0},
+  {k:'board', n:'桌游 · 剧本杀', c:.2, fx:{san:6,net:3},
+   m:{1:['你被朋友拉去玩了一次剧本杀，演了一个反派，演得太投入。'],3:['你组了一个固定的桌游局，每周五晚上雷打不动。',{net:4},'周五桌游局']},
+   g:['你在剧本杀里当了一次侦探，推理得比写周报还用心。','桌游局上，一个朋友说他们公司在招人。'], risk:0},
+  {k:'guitar', n:'吉他', c:.5, fx:{san:6},
+   m:{1:['你买了一把吉他，按 F 和弦按得手指发紫。',{money:-.5}],4:['你在公司年会上弹唱了一首歌。台下有人举起了手机的手电筒。',{san:5,net:3},'年会弹唱']},
+   g:['你每天睡前练半小时，邻居好像没有意见。','你终于能完整弹下来一首歌了。'], risk:0},
+  {k:'plant', n:'养花', c:.1, fx:{san:4},
+   m:{1:['你在阳台上种了几盆多肉，每天下班先去看它们。'],3:['你的阳台变成了一个小花园。楼下的邻居问你要了几个插枝。',{san:4},'阳台园丁']},
+   g:['今年的月季开花了，你拍了好多张照片。','你养死了一盆绿萝。据说那是最难养死的植物。'], risk:0},
+];
+function hobbyMenu(){
+  const ok = HOBBIES.filter(x => x.c <= Math.max(0, s.money));
+  const shuffle = a => a.map(v=>[R(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  const done = shuffle(ok.filter(x => s.sport[x.k])), fresh = shuffle(ok.filter(x => !s.sport[x.k]));
+  const cand = [...done.slice(0,2), ...fresh].slice(0,4);
+  const o = cand.map(x => ({ t:x.n, sub:`${s.sport[x.k] ? `玩过 ${s.sport[x.k]} 次` : '新爱好'}${x.c ? ` · 约 ${x.c} 万` : ' · 几乎免费'}`, f:()=>doSport(x) }));
+  o.push({t:'算了，在家躺着', f:()=>{}});
+  ask('培养个爱好？', '选一个爱好。坚持三次以上，它会变成你生活的一部分。', o);
+}
 function sportMenu(){
   const ok = SPORTS.filter(x => (!x.season || x.season.includes(s.q)) && x.c <= Math.max(0,s.money));
   const shuffle = a => a.map(v=>[R(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
@@ -1837,12 +2085,12 @@ function doSport(x){
   if(!ms && x.bossChance && text.includes('总监') ) eff.boss = 5;
   L(text, fx(eff));
   if(ms && ms[2] && !s.sAch.includes(ms[2])){ s.sAch.push(ms[2]); log('', `解锁成就「${ms[2]}」`, 'head'); }
-  if(n === 3) L(`${x.n}成了你的长期爱好。之后每个季度健康和精神都会慢慢变好。`, '', 'good');
+  if(n === 3) L(`${x.n}成了你的长期爱好。之后每个季度${HOBBIES.includes(x) ? '精神' : '健康和精神'}都会慢慢变好。`, '', 'good');
   if(x.risk && chance(x.risk)) L(x.hurt, fx({hp:-5}), 'warn');
 }
 function hobbyTick(){
-  const hob = SPORTS.filter(x => (s.sport[x.k]||0) >= 3).length;
-  if(hob){ const k = Math.min(hob,2); s.hp = clamp(s.hp + .6*k); s.san = clamp(s.san + .5*k); }
+  const hob = SPORTS.concat(HOBBIES).filter(x => (s.sport[x.k]||0) >= 3).length;
+  if(hob){ const sp = Math.min(SPORTS.filter(x => (s.sport[x.k]||0) >= 3).length, 2), k = Math.min(hob, 2); s.hp = clamp(s.hp + .6*sp); s.san = clamp(s.san + .5*k); }
 }
 
 /* ============ 宠物 ============ */
@@ -1852,7 +2100,7 @@ const PETN = {
 let PET_NAME_INPUT = null; // 平台提供“自己起名”的输入框：cb => cb(名字)；没有就只给候选名字
 function birthEvent(){
   const f = s.gender === 'f';
-  s.flags.preg = false; s.flags.kid = true;
+  s.flags.preg = false; s.flags.kid = true; s.flags.kidAt = s.turn;
   if(f){
     log('', '孩子出生了。你在产房里抱着这个小小的人，觉得过去的所有加班都不重要了。', 'good milestone');
     ask('产假', '法定产假一百多天。工作群里，你的头像已经灰了一个月。', [
@@ -2078,7 +2326,7 @@ function stingLine(){
   }
   c.sort((x,y) => y[0]-x[0]); return c[0][1];
 }
-const RARITY = {"e":{"abroad":2.15,"farm_good":4.66,"blogger_mid":6.46,"rest_bad":5.32,"farm_mid":3.21,"soe_mid":2.9,"lottery":0.91,"fish_good":7.21,"phd_good":1.55,"nomad_good":5.98,"noncompete":1.3,"blogger_good":4.86,"bankrupt":0.66,"civil_good":4.32,"startup_good":2,"exec":3.33,"fish_mid":4.57,"shop_mid":2.4,"nomad_mid":2.56,"home_good":5.66,"home_mid":5.56,"civil_mid":2.1,"soe_good":2.02,"shop_good":3.52,"home_bad":0.53,"blogger_bad":0.66,"phd_mid":0.83,"ai_replaced":1.21,"fire":0.4,"soe_bad":0.73,"rest_good":4.82,"shop_bad":1.27,"angel":0.98,"rest_mid":1.93,"spinoff":0.19,"fish_bad":0.34,"phd_bad":0.07,"farm_bad":0.36,"civil_bad":0.16,"startup_mid":0.1,"blame":0.09,"startup_bad":0.03,"nomad_bad":0.13,"foreign":0.01,"fossil":0.01,"health":0.01,"burnout":0.01,"moyu":0.01,"gig_good":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"卷王":10.46,"一号工程元老":24.95,"绩效守门员":17.4,"旅行爱好者":27.64,"狗爸狗妈":13.58,"新农人":8.22,"合作社带头人":4.06,"摸鱼大师":8.93,"跳槽达人":21.25,"A 股贡献者":8.47,"前大厂博主":11.97,"猫奴":18.52,"间隔年":12.07,"被割过的韭菜":26.16,"国企人":5.64,"拳击爱好者":3.69,"大厂船长":9.19,"博士":2.38,"顶会作者":0.69,"地中海":3.77,"活水之王":14.16,"顶格绩效传说":21.09,"猫狗双全":24.67,"数字游民":8.66,"地球是我的工位":5.48,"房奴":3.8,"三千点守望者":3.96,"环球旅行家":9.11,"背锅侠":0.72,"半马完赛":6.74,"全马完赛":1.57,"爆款制造机":2.04,"岩友":3.62,"上岸":6.57,"笔杆子":4.32,"创业者":2.13,"B 轮掌舵人":2,"百公里骑士":3.58,"行万里路":9.32,"网球爱好者":3.78,"对赌人生":1.09,"奶爸奶妈":1.8,"渔家乐老板":2.01,"浪里白条":2.17,"咖啡店主":7.19,"回乡青年":11.74,"小城院子":5.66,"老板的远房亲戚":0.6,"飞盘社交达人":3.5,"国企一把手":2.02,"连锁老板":3.52,"瑜伽达人":2.23,"冲浪玩家":0.78,"走遍中国":3.81,"股神":0.6,"雪道飞人":0.89,"撸铁人":2.14,"百万粉丝":2.96,"普通打工人":0.92,"羽球健将":3.59,"阳朔岩壁":0.82,"手艺人":3.26,"前大厂高 P 回流":0.52,"天才少年计划":0.07,"地球 Online 全图鉴":0.08,"仲裁赢家":0.03,"老司机":0.01,"便利店老板":0.01}}; // 由 sim/rarity.js 模拟生成：每个结局/称号在模拟人生中出现的比例（%）
+const RARITY = {"e":{"nomad_mid":2.28,"exec":2.21,"farm_mid":3.09,"bankrupt":1.71,"civil_good":4.68,"farm_good":4.32,"home_good":4.95,"blogger_mid":7,"nomad_bad":0.15,"nomad_good":5.5,"home_mid":5.93,"blogger_good":4.4,"shop_mid":2.56,"shop_good":2.99,"rest_mid":2.22,"rest_good":4.4,"soe_good":1.79,"startup_good":3.55,"fish_mid":4.37,"noncompete":0.9,"phd_mid":0.86,"soe_mid":3.22,"rest_bad":4.98,"fish_good":6.47,"fish_bad":0.51,"home_bad":0.65,"phd_good":1.51,"civil_mid":3.23,"civil_bad":0.23,"angel":1.1,"blame":0.27,"shop_bad":1.3,"startup_mid":0.8,"abroad":1.5,"soe_bad":0.73,"blogger_bad":0.78,"lottery":0.64,"farm_bad":0.43,"startup_bad":0.61,"phd_bad":0.04,"ai_replaced":0.63,"fire":0.39,"spinoff":0.06,"health":0.04,"burnout":0.01,"foreign":0.01,"fossil":0.01,"moyu":0.01,"gig_good":0.01,"gig_mid":0.01,"gig_bad":0.01},"t":{"数字游民":7.94,"地球是我的工位":5.09,"顶格绩效传说":16.1,"租房也要住好点":11.77,"猫奴":25.19,"活水之王":9.61,"旅行爱好者":24.56,"新农人":7.85,"卷王":7.6,"一号工程元老":21.15,"雪道飞人":0.76,"上岸":8.14,"笔杆子":4.68,"地中海":1.71,"跳槽达人":19.28,"行万里路":5.83,"走遍中国":1.94,"环球旅行家":6.26,"回乡青年":11.53,"小城院子":4.95,"狗爸狗妈":17.47,"绩效守门员":15.49,"前大厂博主":12.18,"被割过的韭菜":18.21,"摸鱼大师":6.75,"房奴":2.29,"飞盘社交达人":2.73,"网球爱好者":3,"瑜伽达人":1.58,"恋爱失败专业户":1.3,"A 股贡献者":6.17,"三千点守望者":2.33,"百万粉丝":2.52,"咖啡店主":6.84,"连锁老板":2.99,"奶爸奶妈":2.73,"百公里骑士":2.92,"浪里白条":1.64,"半马完赛":6.75,"间隔年":11.6,"岩友":2.85,"手艺人":3.09,"国企人":5.73,"国企一把手":1.79,"创业者":4.97,"对赌人生":2.62,"B 轮掌舵人":3.55,"合作社带头人":4,"大厂船长":8.51,"拳击爱好者":2.88,"猫狗双全":6.94,"博士":2.38,"羽球健将":2.93,"背锅侠":1.57,"快乐教育派":0.24,"星空露营者":0.08,"冲浪玩家":0.5,"神仙眷侣":0.43,"鸟人":0.1,"撸铁人":1.49,"渔家乐老板":1.63,"普通打工人":1.1,"全马完赛":1.49,"阳朔岩壁":0.46,"老板的远房亲戚":0.61,"股神":0.41,"爆款制造机":1.9,"阳台园丁":0.06,"二胎家庭":0.17,"顶会作者":0.6,"前大厂高 P 回流":0.4,"周五桌游局":0.05,"工位烘焙师":0.07,"街拍摄影师":0.05,"仲裁赢家":0.15,"鸡娃家长":0.07,"天才少年计划":0.07,"学区房战士":0.21,"漫展常客":0.07,"动物园园长":0.05,"空军终结者":0.02,"地球 Online 全图鉴":0.01,"重点高中家长":0.01,"百鸟图鉴":0.01,"业余摄影展":0.01,"次元壁破壁人":0.01,"读书人":0.01,"年会弹唱":0.01,"老司机":0.01,"便利店老板":0.01}};
 function fmtPct(v){ return v == null ? '' : v < 1 ? '不到 1%' : v < 10 ? `${r1(v)}%` : `${Math.round(v)}%`; }
 function rarePhrase(v){ return v == null ? '' : v < 1 ? '不到 1%' : '约 ' + fmtPct(v); }
 function endRarity(k){ return rarePhrase(RARITY.e[k||s.ending]); }
@@ -2102,7 +2350,7 @@ function staticRefs(){
   if(STATIC_REFS) return;
   STATIC_REFS = new Set();
   const add = x => { if(x && typeof x === 'object' && !STATIC_REFS.has(x)){ STATIC_REFS.add(x); } };
-  [C, EDUS, ENTRIES, ROLES, FAMS, TRAITS, RARES, ENDINGS, SPORTS, PLACES].forEach(list => { add(list); (Array.isArray(list) ? list : Object.values(list)).forEach(add); });
+  [C, EDUS, ENTRIES, ROLES, FAMS, TRAITS, RARES, ENDINGS, SPORTS, HOBBIES, PLACES].forEach(list => { add(list); (Array.isArray(list) ? list : Object.values(list)).forEach(add); });
   Object.values(CH).forEach(add);
 }
 function snapQuarter(){
@@ -2169,10 +2417,11 @@ function titleDex(){
     ['职场','跳槽达人','待过三家公司'], ['职场','活水之王','转岗两次'], ['职场','一号工程元老','赶上公司的一号工程'],
     ['职场','绩效守门员','两次拿到垫底绩效'], ['职场','顶格绩效传说','三次拿到顶格绩效'], ['职场','仲裁赢家','劳动仲裁打赢了'],
     ['职场','地中海','头发所剩无几'], ['职场','普通打工人','什么称号都没拿到'],
-    ['生活','房奴','买了房'], ['生活','奶爸奶妈','有了孩子'], ['生活','猫奴','养了一只猫'], ['生活','狗爸狗妈','养了一只狗'], ['生活','猫狗双全','猫和狗都养了'], ['生活','动物园园长','同时养 5 只宠物'],
+    ['生活','房奴','买了房'], ['生活','奶爸奶妈','有了孩子'], ['生活','二胎家庭','有了两个孩子'], ['生活','鸡娃家长','在孩子的学习上花了很多心思'], ['生活','快乐教育派','让孩子快乐长大'], ['生活','学区房战士','为孩子买了学区房'], ['生活','重点高中家长','孩子考上了重点高中'], ['生活','神仙眷侣','结婚十年，感情很好'], ['生活','恋爱失败专业户','分手过两次'], ['生活','租房也要住好点','租了品质小区'], ['生活','猫奴','养了一只猫'], ['生活','狗爸狗妈','养了一只狗'], ['生活','猫狗双全','猫和狗都养了'], ['生活','动物园园长','同时养 5 只宠物'],
     ['理财','股神','投资累计赚 200 万'], ['理财','被割过的韭菜','亏了很多钱，或者被骗过'], ['理财','A 股贡献者','在 A 股亏了三年'], ['理财','三千点守望者','持有 A 股满八年'],
   ];
   SPORTS.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['运动', m[2], i++ ? `把${x.n}练到极致` : `坚持${x.n}`]); }); });
+  HOBBIES.forEach(x => { let i = 0; Object.values(x.m).forEach(m => { if(m[2]) d.push(['爱好', m[2], i++ ? `${x.n}玩得很深` : `坚持${x.n}`]); }); });
   TRAVEL_ACH.forEach(a => d.push(['旅行', a.n, {t5:'去过 5 个地方', t10:'去过 10 个地方', cn8:'去过 8 个国内城市', ab5:'去过 5 个国家', all:'所有地方都去过'}[a.k]]));
   d.push(['限定', '尾款人', '双十一限时事件'], ['限定', '大促守夜人', '双十一或 618 限时事件'], ['限定', '春节值班人', '春节限时事件'], ['限定', '年终奖拿满', '春节限时事件'], ['限定', '谈薪高手', '金三银四限时事件'], ['限定', '金牌导师', '毕业季限时事件']);
   Object.values(CH_TITLES).forEach(a => a.forEach(x => d.push(['第二人生', x[0], ''])));
@@ -2192,6 +2441,14 @@ function titles(){
   if(s.st.top >= 3) t.push('顶格绩效传说');
   if(s.flags.house) t.push('房奴');
   if(s.flags.kid) t.push('奶爸奶妈');
+  if(s.flags.kid2) t.push('二胎家庭');
+  if((s.flags.edu||0) >= 5) t.push('鸡娃家长');
+  if(s.flags.kid && (s.flags.happy||0) >= 3) t.push('快乐教育派');
+  if(s.flags.xqf) t.push('学区房战士');
+  if(s.flags.keyHS) t.push('重点高中家长');
+  if(s.flags.married && s.flags.marriedAt != null && s.turn - s.flags.marriedAt >= 40 && !(s.flags.strain > 1)) t.push('神仙眷侣');
+  if((s.st.breakups||0) >= 2) t.push('恋爱失败专业户');
+  if(s.home && s.home.k==='nice' && !s.flags.house) t.push('租房也要住好点');
   if((s.st.pnl||0) >= 200) t.push('股神');
   if((s.st.pnl||0) <= -50 || (s.st.scam||0) >= 1) t.push('被割过的韭菜');
   if((s.st.aLoss||0) >= 3) t.push('A 股贡献者');
@@ -2221,6 +2478,7 @@ function end(k){
   const sc = Math.log10(1+Math.max(0,s.money+invTotal()))*18 + (s.out?0:s.lvIdx/s.comp.exec)*30 + s.hp*.1 + s.san*.1 + bonus;
   s.pct = clamp(Math.round(sc*1.05), 1, 99); s.score = Math.round(sc*10)/10;
   log('结局', `【${e.n}】`, e.t==='bad'?'bad':'good');
+  const ep = kidEpilogue(); if(ep) log('后来', ep, 'good');
   try{ const g = JSON.parse(STORE.getItem('dc_endings')||'[]'); if(!g.includes(k)){ g.push(k); STORE.setItem('dc_endings', JSON.stringify(g)); } }catch(err){}
   s.persona = persona(); s.sting = stingLine();
   try{ const L5 = pastLives(); L5.unshift(lifeRecord()); STORE.setItem('dc_lives', JSON.stringify(L5.slice(0,5))); }catch(err){}
@@ -2428,7 +2686,7 @@ CH.home = {
   metric:c=>({local:'在本地单位',remote:'远程接活',eshop:'开网店'}[c.data.job] || '刚回来'),
   events:[
     {c:c=>!s.flags.married, t:'相亲', d:'亲戚给你介绍了一个对象，说“人老实，在银行上班”。', o:[
-      ['见一面', '', c=>{ if(chance(.5)){ s.flags.married = true; shift(c,8); L('你们聊得很投缘，一年后结婚了。', fx({san:10}),'good milestone'); } else L('对方问你：“大厂出来的，怎么回来了？”你答不上来。', fx({san:-2})); }],
+      ['见一面', '', c=>{ if(chance(.5)){ s.flags.married = true; s.flags.dating = false; s.flags.marriedAt = s.turn; shift(c,8); L('你们聊得很投缘，一年后结婚了。', fx({san:10}),'good milestone'); } else L('对方问你：“大厂出来的，怎么回来了？”你答不上来。', fx({san:-2})); }],
       ['不去', '', c=>L('你妈叹了口气。')]]},
     {t:'父母', d:'你妈说：“回来就好，每天能一起吃晚饭。”', o:[
       ['带爸妈去体检、旅游', '', c=>{ shift(c,6); L('你带爸妈去了一趟海边，你爸第一次看海。', fx({san:8,money:-2})); }],
@@ -2740,7 +2998,7 @@ function chapterQuarter(){
   c.q++;
   const inc = def.income ? def.income(c) : 0;
   c.lastInc = inc;
-  const cost = s.fam.cost + (s.flags.house?4:0) + (s.flags.kid?3:0);
+  const cost = s.fam.cost + (s.flags.house?4:0) + (s.flags.house2?3:0) + (s.flags.kid?3:0) + (s.flags.kid2?2:0) + (s.flags.eduCost||0);
   s.money = r1(s.money + inc - cost);
   if(s.money < 0 && invTotal() > 0){
     let need = -s.money;
@@ -2878,7 +3136,7 @@ function render(){
   const b = s.biz[s.bizIdx];
   const ci = chapterInfo();
   $('id1').innerHTML = ci && !s.over ? `${ci.name}<span class="sep">/</span>${ci.metric}` : `${s.comp.n}<span class="sep">/</span>${b.n}<span class="badge st${b.st}">${STN[b.st]}</span><span class="sep">/</span>${s.role.n}<span class="sep">/</span>${lvLabel()}`;
-  $('id2').innerHTML = `<span>${s.year} 年 Q${s.q} · <b>${s.age}</b> 岁 · ${ci && !s.over ? `离开大厂第 ${Math.floor((s.chapter.q)/4)+1} 年` : `在职 ${Math.floor(s.compQ/4)} 年 ${s.compQ%4} 季`}<button class="mini" id="cohortBtn">同期入职的人 ›</button></span><span>存款 <b>${s.money}</b> 万${invTotal()>0?` · 投资 <b>${invTotal()}</b> 万`:''} · ${ci && !s.over ? `这一季收入 ${s.chapter.lastInc==null?'—':r1(s.chapter.lastInc)} 万` : `年包约 ${Math.round(curPay())} 万`}${s.blame?` · 背锅 ${s.blame}/3`:''}${s.pets.length?` · ${s.pets.map(p=>(p.type==='猫'?'🐱':'🐶')+p.name).join(' ')}`:''}</span>`;
+  $('id2').innerHTML = `<span>${s.year} 年 Q${s.q} · <b>${s.age}</b> 岁 · ${ci && !s.over ? `离开大厂第 ${Math.floor((s.chapter.q)/4)+1} 年` : `在职 ${Math.floor(s.compQ/4)} 年 ${s.compQ%4} 季`}<button class="mini" id="cohortBtn">同期入职的人 ›</button></span><span>存款 <b>${s.money}</b> 万${invTotal()>0?` · 投资 <b>${invTotal()}</b> 万`:''} · ${ci && !s.over ? `这一季收入 ${s.chapter.lastInc==null?'—':r1(s.chapter.lastInc)} 万` : `年包约 ${Math.round(curPay())} 万`}${s.blame?` · 背锅 ${s.blame}/3`:''}${lifeLabel()?` · ${lifeLabel()}`:''}${s.pets.length?` · ${s.pets.map(p=>(p.type==='猫'?'🐱':'🐶')+p.name).join(' ')}`:''}</span>`;
   $('cohortBtn').onclick = showCohort;
   const bars = [['能力','abi'],['健康','hp'],['精神','san'],['人脉','net'],['老板好感','boss'],['头发','hair']];
   $('bars').innerHTML = bars.map(([n,k]) => { const v = Math.round(s[k]); return `<div class="bar"><span>${n}</span><div class="track"><div class="fill ${v<25&&k!=='abi'?'low':''}" style="width:${v}%"></div></div><span class="num">${v}</span></div>`; }).join('');
@@ -2995,7 +3253,7 @@ function showEnding(){
       <div><span>大厂职级</span><span>${lvLabel()}</span></div><div><span>身家</span><span>${r1(s.money+invTotal())} 万</span></div>
       <div><span>待过的公司</span><span>${s.st.companies} 家</span></div><div><span>晋升</span><span>${s.st.promos} 次</span></div>
       <div><span>背过的锅</span><span>${s.blame} 口</span></div><div><span>头发</span><span>${Math.round(s.hair)}</span></div>
-      <div><span>足迹</span><span>${s.visited.length} 地</span></div><div><span>爱好</span><span>${SPORTS.filter(x=>(s.sport[x.k]||0)>=3).map(x=>x.n).slice(0,3).join('、')||'—'}</span></div>
+      <div><span>足迹</span><span>${s.visited.length} 地</span></div><div><span>爱好</span><span>${SPORTS.concat(HOBBIES).filter(x=>(s.sport[x.k]||0)>=3).map(x=>x.n).slice(0,3).join('、')||'—'}</span></div>
       <div><span>投资盈亏</span><span>${(s.st.pnl||0)>=0?'+':''}${r1(s.st.pnl||0)} 万</span></div><div><span>陪伴你的</span><span>${s.pets.map(p=>p.name).join('、')||'—'}</span></div>
     </div>
     ${s.friends.length?`<div class="sum" style="font-size:13px;margin-top:10px">你的${s.friends[0].kind}：<b>${s.friends[0].p.name}</b>，现在${s.friends[0].p.out?s.friends[0].p.out:`在${s.friends[0].p.comp.n}`}。</div>`:''}

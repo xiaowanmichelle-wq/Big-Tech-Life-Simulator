@@ -140,6 +140,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .ctrl{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
 @media(max-width:560px){.seg{padding:2px 11px}.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
+.act.more{border-style:dashed;color:var(--mute)}
 .act:hover:not(:disabled){background:var(--paper2)}
 .act:disabled,.next:disabled{opacity:.35;cursor:not-allowed}
 .next{border:none;background:var(--red);color:#fff;font-weight:700;padding:12px 18px;font-size:15px;white-space:nowrap}
@@ -1372,6 +1373,25 @@ function kidEpilogue(){
   if(s.flags.keyHS || e >= 3) return '很多年后，孩子去了外地读大学。你帮 TA 把行李搬上火车，回来的路上一句话也没说。';
   return '很多年后，孩子也成了一名打工人。入职那天，TA 给你发来一张工牌的照片。';
 }
+// 行动按钮默认只占一行，多出来的收进「更多」
+let ACT_OPEN = false;
+function foldActs(){
+  if(!HAS_DOM) return;
+  ['actsW','actsL'].forEach(id => {
+    const el = $(id), more = el && el.querySelector('.more'); if(!more) return;
+    const acts = [...el.querySelectorAll('.act:not(.more)')];
+    acts.forEach(a => a.style.display = ''); more.style.display = 'none';
+    const top0 = acts.length ? acts[0].offsetTop : 0;
+    if(!acts.some(a => a.offsetTop > top0 + 4)) return;          // 一行放得下，不需要折叠
+    more.style.display = '';
+    if(ACT_OPEN) return;
+    for(let k = acts.length - 1; k >= 1; k--){
+      if(more.offsetTop <= top0 + 4 && !acts.slice(0, k + 1).some(a => a.offsetTop > top0 + 4)) break;
+      acts[k].style.display = 'none';
+    }
+  });
+}
+if(HAS_DOM) window.addEventListener('resize', () => { try{ if(s && !s.over) foldActs(); }catch(e){} });
 function lifeLabel(){
   if(s.chapter) return '';
   const p = [s.flags.house ? '有房' : (s.home ? HOMES[s.home.k].n : '')];
@@ -3143,10 +3163,11 @@ function render(){
   $('strat').innerHTML = `<span class="lab">策略</span><span class="segwrap">` + Object.entries(STRAT).map(([k,v]) => `<button class="seg ${s.strat===k?'on':''}" data-s="${k}">${v.n}</button>`).join('') + `</span><span class="shint">持续生效</span><span class="grades">${s.grades.filter(g=>g!=='·').slice(-4).join(' · ') || '暂无绩效'}</span>`;
   $('strat').querySelectorAll('.seg').forEach(x => x.onclick = () => setStrat(x.dataset.s));
   const busy = s.queue.length || s.over || s.unemployed;
-  const row = (k, lab, used) => `<span class="lab">${lab}</span>` + ACTIONS.map((a,i) => a.k!==k ? '' : `<button class="act" data-i="${i}" ${busy || used || (a.c && !a.c()) ? 'disabled' : ''}>${a.n}</button>`).join('') + `<span class="hint">${used ? '本季已用' : '每季 1 次'}</span>`;
+  const row = (k, lab, used) => `<span class="lab">${lab}</span>` + ACTIONS.map((a,i) => a.k!==k ? '' : `<button class="act" data-i="${i}" ${busy || used || (a.c && !a.c()) ? 'disabled' : ''}>${a.n}</button>`).join('') + `<button class="act more">${ACT_OPEN ? '收起 ▴' : '更多 ▾'}</button><span class="hint">${used ? '本季已用' : '每季 1 次'}</span>`;
   $('actsW').innerHTML = ci ? `<span class="lab">篇章</span><span style="font-size:13px">${ci.name} · ${ci.metric}${ci.left ? ` · 大约还有 ${ci.left} 年` : ' · 即将揭晓'}</span>` : row('w','工作',s.actedW);
   $('actsL').innerHTML = row('l','生活',s.actedL);
-  document.querySelectorAll('#actsW .act, #actsL .act').forEach(x => x.onclick = () => doAction(+x.dataset.i));
+  document.querySelectorAll('#actsW .act, #actsL .act').forEach(x => x.onclick = x.classList.contains('more') ? () => { ACT_OPEN = !ACT_OPEN; render(); } : () => doAction(+x.dataset.i));
+  foldActs();
   $('next').disabled = !!(s.queue.length || s.over || s.unemployed);
   $('next').hidden = !!s.over;
   if(s.over){

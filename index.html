@@ -1197,7 +1197,7 @@ const EVENTS_BASE = [
 
  /* ---------- 个人生活 ---------- */
  // 婚育（按性别）
- {w:()=>(s.flags.married && !s.flags.kid && !s.flags.preg && !s.flags.dink && s.age>=25 && s.age<40)?6:0, cd:3, f:()=>{
+ {w:()=>(s.flags.married && !s.flags.kid && !s.flags.preg && !s.flags.dink && !s.flags.ldr && s.age>=25 && s.age<40)?6:0, cd:3, f:()=>{
    const f = s.gender === 'f';
    ask('要孩子吗', f ? '另一半说：“我们年纪也不小了。”你看了看下个季度的晋升答辩时间。' : '另一半说：“我们年纪也不小了。”你看了看下个季度的项目排期。', [
      {t:'要', f:()=>{ s.flags.preg = true; s.flags.pregAt = s.turn;
@@ -1340,11 +1340,16 @@ const kidAge = () => s.flags.kid ? Math.floor((s.turn - (s.flags.kidAt == null ?
 const ta = () => s.gender === 'f' ? '妈妈' : '爸爸';
 function strain(n){ s.flags.strain = Math.max(0, (s.flags.strain||0) + n); }
 function noLove(){ s.flags.noLove = true; L('你跟家里说：“我现在一个人挺好的。”电话那头叹了口气。你挂了电话，给自己点了一份好吃的。', fx({san:4})); }
+// 异地：持续 n 个季度；期间不会出现“一起看展”“回家晚了冷战”这类同城事件
+function ldrFor(n, backMsg, need){
+  s.flags.ldr = true;
+  s.timers.push({at: s.turn + n, f: () => { if(!s.flags.ldr) return; s.flags.ldr = false; if(!s.over && s.flags[need]) L(backMsg, fx({san:6}), 'good'); }});
+}
 function startDating(msg){ s.flags.dating = true; s.flags.datingAt = s.turn; s.flags.strain = 0; L(msg, fx({san:6}), 'good'); }
-function breakUp(msg){ s.flags.dating = false; s.flags.strain = 0; s.st.breakups = (s.st.breakups||0) + 1; L(msg, fx({san:-8}), 'bad'); }
+function breakUp(msg){ s.flags.dating = false; s.flags.ldr = false; s.flags.strain = 0; s.st.breakups = (s.st.breakups||0) + 1; L(msg, fx({san:-8}), 'bad'); }
 function marry(msg){ s.flags.married = true; s.flags.dating = false; s.flags.marriedAt = s.turn; s.flags.strain = 0; L(msg, fx({san:10,money:-15}), 'good milestone'); }
 function divorce(){
-  s.flags.married = false; s.flags.divorced = true; s.flags.strain = 0;
+  s.flags.married = false; s.flags.divorced = true; s.flags.strain = 0; s.flags.ldr = false;
   const v = r1(Math.max(0, s.money) * .4);
   if(!s.flags.house){ s.home = {k:'share', rent:HOMES.share.rent, since:s.turn}; }
   L('你们和平分开了。' + (s.flags.kid ? '孩子跟着另一半，你每两周接一次。' : '你搬回了合租房。'), fx({san:-15, money:-v}), 'bad');
@@ -1448,25 +1453,28 @@ const FAMILY_EVENTS = [
  {w:()=>(single() && s.age>=23 && s.age<=34 && s.st.q>=4)?.7:0, cd:10, f:()=>ask('楼下的咖啡店', '你连续一个月在楼下咖啡店遇到同一个人。今天只剩一个座位，在 TA 对面。', [
    {t:'坐过去，打个招呼', f:()=>chance(.5) ? startDating('你们从“你也在这栋楼上班？”聊起。后来每天早上，TA 会多点一杯美式。') : L('TA 礼貌地笑了笑，戴上了耳机。', fx({san:-1}))},
    {t:'打包带走', f:()=>L('第二天，TA 没再出现。', fx({san:-1}))}])},
- {w:()=>s.flags.dating?2.4:0, cd:4, f:()=>ask('约会', '你们约好周六去看展。周五晚上十点，老板在群里说：“明天上线，大家辛苦一下。”', [
+ {w:()=>(s.flags.dating && s.flags.ldr)?2.4:0, cd:4, f:()=>ask('异地的周末', '你买好了周五晚上的高铁票去看 TA。周五下午六点，老板在群里说：“今晚要上线，大家留一下。”', [
+   {t:'跟老板请假，按时出发', f:()=>L('你在高铁上把电脑合上了。出站口，TA 举着一杯你喜欢的奶茶。', fx({san:6,boss:-3,money:-.2}))},
+   {t:'退票，留下来加班', f:()=>{ strain(1); if((s.flags.strain||0) >= 3 && chance(.5)) breakUp('视频里，TA 说：“我们见一面越来越难了。”你们分手了。'); else L('你给 TA 发了一句“下周一定”。那边过了很久才回了一个“好”。', fx({san:-5,qmod:3})); }}])},
+ {w:()=>(s.flags.dating && !s.flags.ldr)?2.4:0, cd:4, f:()=>ask('约会', '你们约好周六去看展。周五晚上十点，老板在群里说：“明天上线，大家辛苦一下。”', [
    {t:'跟老板说有事，不去了', f:()=>L('你关掉了消息提醒，看了一整天的展。周一老板没说什么，但也没再找你。', fx({san:6,boss:-3}))},
    {t:'跟对象道歉，回公司', f:()=>{ strain(1); if((s.flags.strain||0) >= 3 && chance(.5)) breakUp('对象说：“我好像总是排在你的工作后面。”你们分手了。'); else L('对象说“没事”。但你知道，这已经不是第一次了。', fx({san:-4,qmod:3})); }}])},
- {w:()=>(s.flags.dating && !s.flags.metParents && s.turn-(s.flags.datingAt||0)>=3)?2:0, cd:4, f:()=>ask('见家长', '对象说：“我爸妈想见见你。”', [
+ {w:()=>(s.flags.dating && !s.flags.ldr && !s.flags.metParents && s.turn-(s.flags.datingAt||0)>=3)?2:0, cd:4, f:()=>ask('见家长', '对象说：“我爸妈想见见你。”', [
    {t:'郑重准备', f:()=>{ s.flags.metParents = true; L('你提着水果和茶叶，在对方家里吃了一顿很长的饭。对方妈妈问了三遍你的工作稳不稳定。', fx({money:-.5,san:-2})); }},
    {t:'再等等，还没准备好', f:()=>{ strain(1); L('对象说：“好吧。”语气不太好。', fx({san:-2})); }}])},
  {w:()=>(s.flags.dating && !s.flags.ldrDone)?.6:0, cd:8, f:()=>ask('异地', '对象拿到了一个外地的好机会，要去两年。', [
-   {t:'支持，先异地', f:()=>{ s.flags.ldrDone = true; L('你们开始每晚视频。你开着视频加班，TA 开着视频做饭。', fx({san:-3})); later(8, ()=>{ if(s.flags.dating) L('两年过去，对象回来了。你去高铁站接站，紧张得像第一次约会。', fx({san:8}), 'good'); }, true); }},
+   {t:'支持，先异地', f:()=>{ s.flags.ldrDone = true; ldrFor(8, '两年过去，对象回来了。你去高铁站接站，紧张得像第一次约会。', 'dating'); L('你们开始每晚视频。你开着视频加班，TA 开着视频做饭。', fx({san:-3}));  }},
    {t:'劝对方别去', f:()=>{ s.flags.ldrDone = true; if(chance(.5)){ strain(2); L('对方留了下来，但之后偶尔会提起那个机会。', fx({san:-2})); } else breakUp('对方还是去了。几个月后，你们在一次视频里平静地说了分开。'); }}])},
 
  /* ---------- 婚姻 ---------- */
- {w:()=>s.flags.married?(s.strat==='juan'?1.6:.5):0, cd:8, f:()=>ask('冷战', '你已经连续一个月十点以后才到家。某天晚上，另一半说：“我们聊聊。”', [
+ {w:()=>(s.flags.married && !s.flags.ldr)?(s.strat==='juan'?1.6:.5):0, cd:8, f:()=>ask('冷战', '你已经连续一个月十点以后才到家。某天晚上，另一半说：“我们聊聊。”', [
    {t:'请几天年假，一起出去走走', f:()=>{ strain(-2); L('你们去了一趟海边。回来的高铁上，你们聊起了刚认识的时候。', fx({money:-3,san:8,qmod:-3})); }},
    {t:'“最近项目紧，过了这阵就好”', f:()=>{ strain(1); L('另一半没再说话。那天晚上，你们背对背睡着。', fx({san:-5})); }}])},
  {w:()=>(s.flags.married && (s.flags.strain||0)>=4)?3:0, cd:8, f:()=>ask('婚姻亮起红灯', '另一半把一张打印好的纸放在桌上：“我认真想过了。”', [
    {t:'去做婚姻咨询，再试一次', f:()=>{ if(chance(.55)){ s.flags.strain = 1; L('咨询师让你们每周留一个晚上，不看手机。你们坚持了下来。', fx({money:-2,san:4}), 'good'); } else divorce(); }},
    {t:'尊重对方的决定', f:()=>divorce()}])},
  {w:()=>(s.flags.married && !s.flags.moveAsk)?.6:0, cd:8, f:()=>{ s.flags.moveAsk = true; ask('另一半要调去外地', '另一半的公司在外地开新分部，想让 TA 去当负责人。', [
-   {t:'支持，周末两地跑', f:()=>{ L('你开始每周五坐高铁过去，周日晚上回来。高铁上你还在回消息。', fx({hp:-3,san:-2})); later(8, ()=>{ if(s.flags.married) L('两年期满，另一半调回来了。', fx({san:6}), 'good'); }, true); }},
+   {t:'支持，周末两地跑', f:()=>{ ldrFor(8, '两年期满，另一半调回来了。', 'married'); L('你开始每周五坐高铁过去，周日晚上回来。高铁上你还在回消息。', fx({hp:-3,san:-2})); }},
    {t:'申请调去那边的办公室', f:()=>chance(.4+(s.boss-50)*.01) ? L('老板居然批了。你们在新城市租了一套带阳台的房子。', fx({san:8,net:-6,qmod:-2}), 'good') : L('申请被驳回了：“那边没有你这个岗位。”', fx({san:-4}))},
    {t:'请对方放弃这个机会', f:()=>{ strain(2); L('另一半推掉了。后来 TA 的新领导，正是当初顶替去的那个人。', fx({san:-3})); }}]); }},
  {w:()=>(s.flags.married && s.q===1)?1.6:0, cd:4, f:()=>ask('春节回谁家', '又到春节了。两边的父母都打电话来问：“今年回来吗？”', [

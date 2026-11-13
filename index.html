@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>大厂人生模拟器</title>
+<title>工位浮生记 · 大厂人生模拟器</title>
 <meta name="description" content="你是数百万互联网打工人中的一个。随机投胎到一家大厂，按季度活下去：绩效、晋升、裁员、跳槽、第二人生，51 种结局。">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="大厂人生模拟器">
-<meta property="og:title" content="大厂人生模拟器：你能在大厂活成什么样？">
+<meta property="og:site_name" content="工位浮生记">
+<meta property="og:title" content="工位浮生记｜大厂人生模拟器：你能在大厂活成什么样？">
 <meta property="og:description" content="随机投胎到一家大厂，按季度活下去。绩效、晋升、裁员、跳槽、第二人生，51 种结局等你解锁。">
 <meta property="og:url" content="https://dachang.life/">
 <meta property="og:image" content="https://dachang.life/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="大厂人生模拟器：你能在大厂活成什么样？">
+<meta name="twitter:title" content="工位浮生记｜大厂人生模拟器：你能在大厂活成什么样？">
 <meta name="twitter:image" content="https://dachang.life/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
@@ -38,6 +38,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 .startbar .btn{flex:1}
 @media(max-width:560px){#start{padding-top:calc(14px + env(safe-area-inset-top))}h1{font-size:28px}.masthead{margin-bottom:14px}.odds{margin-top:10px}.odds b{font-size:24px}.card{padding:12px 14px;margin:10px 0 18px}.row{padding:5px 0}}
 .masthead{border-bottom:3px double var(--ink);padding-bottom:14px;margin-bottom:28px}
+.masthead .kicker{font-size:13px;letter-spacing:4px;color:var(--mute);margin-bottom:4px}
 .odds{font-family:var(--serif);font-size:15px;margin:24px 0 6px;color:var(--mute)}
 .odds b{font-size:30px;color:var(--ink);font-weight:900;letter-spacing:.02em}
 .card{background:#fbf9f4;border:1.5px solid var(--ink);box-shadow:5px 5px 0 var(--ink);padding:18px 20px;margin:14px 0 26px}
@@ -218,7 +219,8 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 <div id="app">
   <section id="start">
     <div class="masthead">
-      <h1>大厂人生模拟器</h1>
+      <div class="kicker">大厂人生模拟器</div>
+      <h1>工位浮生记</h1>
       <div class="sub">你是数百万互联网打工人中的一个 · 从入职那天开始，按季度活下去</div>
     </div>
     <div class="chal" id="chal" hidden></div>
@@ -3732,7 +3734,7 @@ function showLives(){
 }
 function shareText(){
   const e = ENDINGS[s.ending];
-  return `${s.daily ? `【今日开局 · ${dailyLabel(s.daily)}】` : ''}我在《大厂人生模拟器》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，职场人格是「${(s.persona||persona()).n}」，称号：${titles().join('、')}。${s.sting || stingLine()}${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
+  return `${s.daily ? `【今日开局 · ${dailyLabel(s.daily)}】` : ''}我在《工位浮生记》里活了一次：${s.edu.n}出身，在${s.comp.n}做${s.role.n}，${s.age} 岁迎来结局【${e.n}】。超过了 ${s.pct}% 的打工人，职场人格是「${(s.persona||persona()).n}」，称号：${titles().join('、')}。${s.sting || stingLine()}${challengeLine()}${cohortSummary()}\n“${s.quote}”\n\n同一个开局，你能活成什么样？${SITE}/?${challengeQuery()}`;
 }
 function wrap(x, text, maxW){
   const lines = []; let cur = '';
@@ -3748,7 +3750,7 @@ async function showShare(){
   const ink = '#23201b', mute = '#7b7468', col = {good:'#3f6b47',bad:'#b5361f',mid:'#2f5576',hidden:'#a8741a'}[e.t];
   x.fillStyle = '#f3efe6'; x.fillRect(0,0,W,H);
   let y = 96;
-  x.fillStyle = ink; x.font = `900 30px ${serif}`; x.fillText('大厂人生模拟器', P, y);
+  x.fillStyle = ink; x.font = `900 30px ${serif}`; x.fillText('工位浮生记', P, y);
   x.fillStyle = mute; x.font = `15px ${sans}`; x.textAlign = 'right'; x.fillText(`${s.year} 年 · ${s.age} 岁`, W-P, y); x.textAlign = 'left';
   y += 22; x.fillStyle = ink; x.fillRect(P, y, W-2*P, 2);
   const er = endRarity(), pe = s.persona || persona(), sting = s.sting || stingLine();
@@ -3781,7 +3783,7 @@ async function showShare(){
   x.font = `700 28px ${serif}`; x.textAlign = 'center';
   wrap(x, `“${s.quote}”`, W-2*P-40).forEach(l => { y += 14; x.fillText(l, W/2, y+14); y += 30; });
   const H2 = y + 150;
-  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 大厂人生模拟器', W/2, H2-100);
+  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 工位浮生记', W/2, H2-100);
   x.font = `700 26px ${serif}`; x.fillStyle = ink; x.fillText('dachang.life', W/2, H2-66); x.textAlign = 'left';
   const out = document.createElement('canvas'); out.width = W*2; out.height = H2*2;
   const o = out.getContext('2d'); o.drawImage(cv, 0, 0, W*2, H2*2, 0, 0, W*2, H2*2); o.scale(2,2);

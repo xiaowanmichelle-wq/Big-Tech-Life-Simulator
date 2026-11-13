@@ -3620,7 +3620,9 @@ function hlText(ic, l){
   if(ic === '👋' && (m = t.match(/^你的(.+?)(去了.+?|离开了大厂，.+?)。/))) return `${m[1]}${m[2]}`;
   if(ic === '🚀' && /股份/.test(t)) return '跟着业务分拆出去，拿到了股份';
   if(ic === '🚀' && (m = t.match(/「(.+?)」突然爆了/))) return `「${m[1]}」突然爆了，成了一号工程`;
-  return t.split('。')[0];
+  let d = 0;   // 取第一句，但不在引号中间断开
+  for(let i = 0; i < t.length; i++){ const c = t[i]; if(c === '“') d++; else if(c === '”') d = Math.max(0, d-1); else if(c === '。' && d === 0) return t.slice(0, i); }
+  return t;
 }
 const HL_CAP = {'✨':5, '🌧':3, '🌟':3, '📊':3, '🏅':5, '📉':3, '🐾':2, '🤝':4};
 function lifeRecord(){
@@ -3644,7 +3646,7 @@ function lifeHighlights(){
       else if(ic === '📊') t = `这一年投资${((l.sub||'').match(/全年(盈利|亏损) [\d.]+ 万/) || [''])[0].replace('全年','')}`;
       else if(ic === '🌟' || ic === '📉') t = t.replace(/^【绩效】/, ic === '🌟' ? '顶格绩效 · ' : '最低绩效 · ');
       else t = hlText(ic, l);
-      out.push({y:l.y, age:l.age, icon:ic, text:t, end: ic === '🏁'});
+      out.push({y:l.y, q:l.q, age:l.age, icon:ic, text:t, end: ic === '🏁'});
       break;
     }
   }

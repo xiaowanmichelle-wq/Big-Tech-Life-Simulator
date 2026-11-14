@@ -142,6 +142,7 @@ h1{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;
 @media(max-width:560px){.seg{padding:2px 11px}.dock .in{flex-wrap:wrap;gap:8px}.next{width:100%;padding:10px}.line .lab{width:34px;font-size:12px}.line .hint{display:none}.act{padding:2px 8px;font-size:12.5px}.ctrl{gap:5px}.ln .t:empty{display:none}.ln .t{width:auto;padding-right:2px}.ln{gap:6px}}
 .act{border:1px solid var(--ink);background:transparent;padding:3px 10px;font-size:13px}
 .act.more{border-style:dashed;color:var(--mute)}
+.mpguide{font-size:12px;color:var(--mute);text-align:center;margin-top:14px}
 .statnote{font-size:11px;color:var(--mute);text-align:center;margin:14px 0 4px;opacity:.8}
 .parallel{border:1.5px dashed var(--line);padding:10px 12px;margin:12px 0}.parallel p{margin:4px 0;font-size:14px}.parallel .btn{margin-top:8px}
 .hotline{font-size:13px;color:var(--mute);border-left:3px solid var(--line);padding:4px 10px;margin:8px 0}
@@ -3760,6 +3761,9 @@ const ADSENSE_TEST = false;  // 调试时设为 true，会请求测试广告
   };
 })();
 /* WEB-ADS-END */
+// 引导到小游戏完整版（小红书版构建时会清空这两行）
+const MP_GUIDE = '也可以在微信里玩：搜索小游戏「工位浮生记」';
+const MP_CARD = '你也来活一次 · 微信搜索小游戏「工位浮生记」';
 function showEnding(){
   const e = ENDINGS[s.ending];
   const cls = e.t==='good'?'good':e.t==='bad'?'bad':'mid';
@@ -3785,7 +3789,8 @@ function showEnding(){
     <div class="sum" style="font-size:13px;color:var(--mute);margin-top:10px">${cohortSummary()} <button class="mini" id="cohortEnd">看看他们</button></div>
     <div class="quote">“${s.quote}”</div>
     <div class="btns"><button class="btn primary" id="recapbtn">回看这一生</button><button class="btn" id="sharebtn">生成分享卡</button><button class="btn" id="again">重新投胎</button></div>
-    ${canRewind() && adReady() ? '<button class="btn rewindbtn" id="rewind">⏪ 看个广告，回到一年前</button>' : ''}</div>`;
+    ${canRewind() && adReady() ? '<button class="btn rewindbtn" id="rewind">⏪ 看个广告，回到一年前</button>' : ''}
+    ${MP_GUIDE ? `<div class="mpguide">${MP_GUIDE}</div>` : ''}</div>`;
   $('sharebtn').onclick = () => { track('生成分享卡'); showShare(); };
   if($('rewind')) $('rewind').onclick = () => showRewarded('rewind').then(ok => {
     if(!ok){ alert('广告没有看完，或者暂时没有广告，稍后再试。'); return; }
@@ -3897,7 +3902,7 @@ async function showShare(){
   x.font = `700 28px ${serif}`; x.textAlign = 'center';
   wrap(x, `“${s.quote}”`, W-2*P-40).forEach(l => { y += 14; x.fillText(l, W/2, y+14); y += 30; });
   const H2 = y + 150;
-  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText('你也来活一次 · 工位浮生记', W/2, H2-100);
+  x.font = `15px ${sans}`; x.fillStyle = mute; x.fillText(MP_CARD || '你也来活一次 · 工位浮生记', W/2, H2-100);
   x.font = `700 26px ${serif}`; x.fillStyle = ink; x.fillText('dachang.life', W/2, H2-66); x.textAlign = 'left';
   const out = document.createElement('canvas'); out.width = W*2; out.height = H2*2;
   const o = out.getContext('2d'); o.drawImage(cv, 0, 0, W*2, H2*2, 0, 0, W*2, H2*2); o.scale(2,2);
